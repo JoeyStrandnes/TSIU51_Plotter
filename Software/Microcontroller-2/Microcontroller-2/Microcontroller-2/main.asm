@@ -29,3 +29,5 @@ DRUM_TRIGGER:
 
 HW_INIT:
 	
+	ret
+	
