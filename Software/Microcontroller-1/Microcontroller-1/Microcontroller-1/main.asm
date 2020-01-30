@@ -5,9 +5,20 @@
 
 //////////////MEMORY LAYOUT////////////////////////////////////////////////////////
 	.dseg
-	.org SRAM_START
+	.org 0x0060 //SRAM_START
 DDRAM_ADDR:
 	.byte 1
+GREEN_N:
+	.byte 1
+ORANGE_N:
+	.byte 1
+RED_N:
+	.byte 1
+PURPLE_N:
+	.byte 1
+YELLOW_N:
+	.byte 1
+
 	.cseg
 
 
@@ -15,14 +26,25 @@ DDRAM_ADDR:
 	out SPH, r16
 	ldi r16, LOW(RAMEND)
 	out SPL, r16
+	
+	call INIT_CLEAR_SRAM
 	call LCD_SETUP
 	jmp MAIN
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-
+INIT_CLEAR_SRAM:
+	ldi r17, 6 //NUMBER OF BYTES TO CLEAR
+	clr r16
+	ldi YH,HIGH(SRAM_START)
+	ldi YL,LOW(SRAM_START)
+INIT_CLEAR_SRAM_LOOP:
+	st Y+, r16
+	dec r17
+	brne INIT_CLEAR_SRAM_LOOP
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_SETUP:	
 	ldi r16, 0x00
-	out DDRD, r16 // DB0-DB7 set to READMODE as default, will change.
+	out DDRD, r16 // DB0-DB7 set to READMODE as default, will change briefly when writing.
 	ldi r16, 0x07 
 	out DDRA , r16 // PIN0 - E, PIN1- R/W, PIN2 - RS set to WRITEMODE, will not change.
 
@@ -57,13 +79,13 @@ DO_NOTHING:
 
 LCD_INSTRUCTION_WRITE:
 	ldi r19, (0<<E)|(0<<RW)|(0<<RS) 
-	out PORTA, r19 // LCD IN WRITE MODE, INSTRUCTION
+	out PORTA, r19 
 	call LCD_WRITE
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_DATA_WRITE:
 	ldi r19, (0<<E)|(0<<RW)|(1<<RS) 
-	out PORTA, r19 // LCD IN WRITE MODE, DATA
+	out PORTA, r19 
 	call LCD_WRITE
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -88,19 +110,35 @@ LCD_WRITE: //RS = 1 IS DATA, RS = 0 IS INSTRUCTION.
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 WAIT_IF_BUSY:
+	cli //TIMING DEPENDANT I THINK
 	ldi r16, (1<<E)|(1<<RW)|(0<<RS)
 	out PORTA, r16
-	nop
-
 	andi r16, 0xFE 
 	out PORTA, r16 //E PULSE STOPS
 	sbic PIND, 7
 	rjmp WAIT_IF_BUSY
-
+	sei
 	ret
 
 LCD_READ_DDRAM:
-	
+	ldi r19, (1<<E)|(1<<RW)|(0<<RS)
+	out PORTA, r16
+	//WAIT 220 ns for valid data?
+	in r17, PIND
+
+	andi r16, 0xFE
+	out PORTA, r16
+
+	in r18, PIND 
+	andi r17, 0x7F // MASK OUT DB7 
+	andi r18, 0x7F // MASK OUT DB7
+	cp r17, r18 // NOT SURE IF DDRAM ADDR IS CHANGED?
+	breq TEST_EQUAL
+TEST_LOOP:
+	rjmp TEST_LOOP
+TEST_EQUAL:
+	sts DDRAM_ADDR, r17
+	ret
 /*LCD_INSTRUCTION_READ:
 	ldi r19, (0<<E)|(1<<RW)|(0<<RS)
 	ret
