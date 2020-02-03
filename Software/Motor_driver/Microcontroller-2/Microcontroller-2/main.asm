@@ -1,27 +1,10 @@
 ;motor processor
 
 
-	.dseg
-	.org	SRAM_START
-POSU:
-	.byte	1	;Upper slab possission
-POSL:
-	.byte	1	;Lower slab possission
-
-
-	.cseg
-SERVO_STOP:	
-	.db		0x00, 0x00	;***fixa sen***
-SERVO_RR:	;refresh rate
-	.db		0x00, 0x00	;***fixa sen***
-SERVO_CW:	;clockwise
-	.db		0x00, 0x00	;***fixa sen***
-SERVO_CCW:	;counter clockwise
-	.db		0x00, 0x00	;***fixa sen***
 
 
 
-	;---code
+
 	.cseg
 	.org	0
 	jmp		START
@@ -29,11 +12,29 @@ SERVO_CCW:	;counter clockwise
 	jmp		UPPER_TRIGGER
 	.org	INT1addr
 	jmp		LOWER_TRIGGER
-	.org	0x10
+	.org	OVF1addr
 	jmp		SERVO_DIRECTION
 
 
 
+	.dseg
+	.org	SRAM_START
+POSU:
+	.byte	1	;Upper slab possission
+POSL:
+	.byte	1	;Lower slab possission
+COLOR_POS:
+	.byte	1	;current color possission
+	.cseg
+
+
+	.equ	SERVO_RR	= 2600		;Refresh rate
+	.equ	SERVO_CW	= 300		;Clockwise
+	.equ	SERVO_CCW	= 0			;Counter clockwise
+	.equ	SERVO_ST	= 0			;Stop
+
+
+	;---code
 START:
 	ldi		r16, HIGH(RAMEND)
 	out		SPH, r16
@@ -41,8 +42,15 @@ START:
 	out		SPL, r16
 	;
     call	HW_INIT
-	
-    rjmp	start
+	;
+
+
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1BL, r16
+LOOP:
+    rjmp	LOOP
 ;---------------------------------------
 
 
@@ -56,7 +64,7 @@ UPPER_TRIGGER:
 
 	;pull all used
 	pop		r16
-	out		r16, SREG
+	out		SREG, r16
 	pop		r16
 	reti
 ;----------------------------------------
@@ -70,11 +78,43 @@ LOWER_TRIGGER:
 	push	r16
 	in		r16, SREG
 	push	r16
+	push	r17
 	;
-
+	in		r16, PINB	
+	cpi		r16, 0		;clockwise if 1
+	breq	CCW_DIR
+CW_DIR:
+	lds		r16, (POSL)
+	inc		r16
+	rjmp	DIR_LIM
+CCW_DIR:
+	lds		r16, (POSL)
+	dec		r16
+	;
+DIR_LIM:
+	ori		r16, 0	;check negative
+	brmi	UND_LIM	;under limit
+	cpi		r16, 5	;over limit
+	brne	POS_OK
+	subi	r16, 1	;***utanför sensor***
+UND_LIM:
+	inc		r16		;***utanför sensor***
+	;
+POS_OK:
+	sts		(POSL), r16	;new pos
+	lds		r17, (COLOR_POS)
+	cp		r16, r17
+	brne	NO_DROP
+DROP:
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1BL, r16
+NO_DROP:
 	;pull all used
+	pop		r17
 	pop		r16
-	out		r16, SREG
+	out		SREG, r16
 	pop		r16
 	reti
 ;----------------------------------------
@@ -85,26 +125,16 @@ SERVO_DIRECTION:
 	push	r16
 	in		r16, SREG
 	push	r16
-	;
+	;		
 
 	;pull all used
 	pop		r16
-	out		r16, SREG
+	out		SREG, r16
 	pop		r16
 	reti
 ;----------------------------------------
 
 
-
-
-
-CHANGE_SERVO:
-	lpm		r16, Z+
-	out		ICR1H, r16
-	lpm		r16, Z
-	out		ICR1L, r16
-	ret
-;----------------------------------------
 
 
 
@@ -116,19 +146,24 @@ HW_INIT:
 	ldi		r16, (1<<INT0)|(1<<INT1)
 	out		GICR, r16
 
+	ldi		r16, 0xF0	
+	out		DDRD, r16	;D 4-7 output
+
+	ldi		r16, 0x00
+	out		DDRB, r16	;B input 
 
 TIMER_INIT:
 	; Setting counter mode 
 	ldi		r16, (1<<WGM13)|(1<<WGM12)
 	out		TCCR1B, r16
 
-	ldi		r16, (1<<WGM11)|(0<<WGM10) 
+	ldi		r16, (1<<WGM11)|(0<<WGM10)|(1<<COM1A1)|(0<<COM1A0)|(1<<COM1B1)|(0<<COM1B0)
 	out		TCCR1A, r16
 
 	; Setting max counter value before overflow
-	ldi		r16, 0x3D
+	ldi		r16, HIGH(SERVO_RR)
 	out		ICR1H, r16
-	ldi		r16, 0x08
+	ldi		r16, LOW(SERVO_RR)
 	out		ICR1L, r16
 
 	; Setting prescaling and interrupt
@@ -138,5 +173,5 @@ TIMER_INIT:
 	out		TCCR1B, r16
 	ldi		r16, 1<<TOIE1
 	out		TIMSK, r16
+	sei
 	ret
-	
