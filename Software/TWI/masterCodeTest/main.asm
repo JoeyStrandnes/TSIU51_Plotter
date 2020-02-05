@@ -13,18 +13,22 @@ init:
 	ldi r16, 0x00
 	out PORTA, r16
 
-	ldi r16, 0xFF
+	ldi r16, 0x00
 	out TWBR, r16
 	ldi r16, 0x02
 	out TWSR, r16
 main:
-	//call DELAY_INIT
+	///////////DUMMY///////
 	call start
-	//call DELAY_INIT
 	call sendAddress
-	//call DELAY_INIT
+	call stop
+	///////////////////////
+	call start
+
+	call sendAddress
+
 	call sendData
-	//call DELAY_INIT
+
 	call repeated_start
 	call readData
 //	call repeated_start
