@@ -9,11 +9,13 @@
 	.org	0
 	jmp		START
 	.org	INT0addr
-	jmp		UPPER_TRIGGER
+	jmp		ISR_UPPER_TRIGGER
 	.org	INT1addr
-	jmp		LOWER_TRIGGER
+	jmp		ISR_LOWER_TRIGGER
 	.org	OVF1addr
-	jmp		SERVO_DIRECTION
+	jmp		ISR_SERVO_DIRECTION
+	.org	0x26	//Timer0 comp
+	jmp		ISR_TIMER0_COMP
 
 
 
@@ -23,12 +25,16 @@ POSU:
 	.byte	1	;Upper slab possission
 POSL:
 	.byte	1	;Lower slab possission
-
+COLOR_POS:
+	.byte	1	;current color possission
 	.cseg
 
 
-	.equ	SERVO_RR = 2600		;refresh rate
-	.equ	SERVO_CW = 300		;clockwise
+	.equ	SERVO_RR	= 2600		;Refresh rate
+	.equ	SERVO_CW	= 300		;Clockwise
+	.equ	SERVO_CCW	= 100			;Counter clockwise
+	.equ	SERVO_ST	= 0			;Stop
+
 
 	;---code
 START:
@@ -39,19 +45,20 @@ START:
 	;
     call	HW_INIT
 	;
-
+	call	WARM
 
 	ldi		r16, HIGH(SERVO_CW)
 	out		OCR1BH, r16
 	ldi		r16, LOW(SERVO_CW)
 	out		OCR1BL, r16
 LOOP:
+
     rjmp	LOOP
 ;---------------------------------------
 
 
 ;***Eatch time the the drum passes a color dump***
-UPPER_TRIGGER:
+ISR_UPPER_TRIGGER:
 	;push all used
 	push	r16
 	in		r16, SREG
@@ -69,13 +76,58 @@ UPPER_TRIGGER:
 
 
 ;***Eatch time the the drum passes a color dump***
-LOWER_TRIGGER:
+ISR_LOWER_TRIGGER:
 	;push all used
 	push	r16
 	in		r16, SREG
 	push	r16
+	push	r17
 	;
+
+	brtc	NORMAL_PROCEDURE
+INIT_WARM:
+	clr		r16
+	out		TCNT0, r16
+	rjmp	ISR_LOWER_TRIGGER_END
+	;
+NORMAL_PROCEDURE:
+	in		r16, PINB	
+	cpi		r16, 0		;clockwise if 1
+	breq	CCW_DIR
+CW_DIR:
+	lds		r16, (POSL)
+	inc		r16
+	rjmp	DIR_LIM
+CCW_DIR:
+	lds		r16, (POSL)
+	dec		r16
+	;
+DIR_LIM:
+	ori		r16, 0	;check negative
+	brmi	UND_LIM	;under limit
+	cpi		r16, 5	;over limit
+	brne	POS_OK
+	subi	r16, 1	;***utanf�r sensor***
+UND_LIM:
+	inc		r16		;***utanf�r sensor***
+	;
+POS_OK:
+	sts		(POSL), r16	;new pos
+	lds		r17, (COLOR_POS)
+	cp		r16, r17
+	brne	NO_DROP
+DROP:
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1BL, r16
+NO_DROP:
+
+
+
+ISR_LOWER_TRIGGER_END:
 	;pull all used
+	pop		r17
 	pop		r16
 	out		SREG, r16
 	pop		r16
@@ -83,7 +135,7 @@ LOWER_TRIGGER:
 ;----------------------------------------
 
 
-SERVO_DIRECTION:
+ISR_SERVO_DIRECTION:
 	;push all used
 	push	r16
 	in		r16, SREG
@@ -99,15 +151,22 @@ SERVO_DIRECTION:
 
 
 
-
-
-CHANGE_SERVO:
-	lpm		r16, Z
-	out		ICR1H, r16
-	adiw	Z, 1
-	lpm		r16, Z
-	out		ICR1L, r16
-	ret
+ISR_TIMER0_COMP:
+	;push all used
+	push	r16
+	in		r16, SREG
+	push	r16
+	;	
+	clt
+	ldi		r16, HIGH(SERVO_CCW)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_CCW)
+	out		OCR1BL, r16
+	;pull all used
+	pop		r16
+	out		SREG, r16
+	pop		r16
+	reti
 ;----------------------------------------
 
 
@@ -120,10 +179,14 @@ HW_INIT:
 	ldi		r16, (1<<INT0)|(1<<INT1)
 	out		GICR, r16
 
-	ldi		r16, 0xF0
-	out		DDRD, r16
+	ldi		r16, 0xF0	
+	out		DDRD, r16	;D 4-7 output
 
-TIMER_INIT:
+	ldi		r16, 0x00
+	out		DDRB, r16	;B input 
+	;
+
+TIMER1_INIT:
 	; Setting counter mode 
 	ldi		r16, (1<<WGM13)|(1<<WGM12)
 	out		TCCR1B, r16
@@ -139,10 +202,33 @@ TIMER_INIT:
 
 	; Setting prescaling and interrupt
 	in		r16, TCCR1B  
-	ori		r16,(0<<CS12)|(1<<CS11)|(1<<CS10) ;Prescaler set to F_CPU/64 (S:108)
+	ori		r16,(0<<CS12)|(1<<CS11)|(1<<CS10) //Prescaler set to F_CPU/64 (S:108)
 
 	out		TCCR1B, r16
 	ldi		r16, 1<<TOIE1
 	out		TIMSK, r16
+	;
+	
+TIMER0_INIT:	;8bit timer
+	ldi		r16, (1<<CS02)|(0<<CS01)|(1<<CS00)|(0<<WGM00)|(1<<WGM01) // Prescaler /1024, CTC mode
+	out		TCCR0, r16	
+	
+	in		r16, TIMSK
+	ori		r16, (1<<TOIE0)
+	out		TIMSK, r16
+	ldi		r16, 0x0F	//time before overflow
+	out		OCR0, r16
+
+	ret
+;--------------------------------------------
+
+
+
+WARM:
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1BL, r16
+	set
 	sei
 	ret
