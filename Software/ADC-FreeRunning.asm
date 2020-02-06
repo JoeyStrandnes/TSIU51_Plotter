@@ -50,11 +50,12 @@ MAIN:
 
 ADC_ISR:
 	in		r16, ADCL
+	in		r17, ADCH
 
 	cpi		r16, 0x0F
 	brlo	NO_OVER_CURRENT
 	 
-	ldi		r16, (0<<PB0)
+	ldi		r16, (1<<PB0)
 	out		PORTB, r16
 	jmp		ADC_DONE
 
