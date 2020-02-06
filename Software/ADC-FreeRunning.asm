@@ -11,22 +11,34 @@ SETUP:
 	ldi		r16, LOW(RAMEND)
 	out		SPL, r16
 
-
 	call	ADC_INIT
 
+	ldi		r16, (1<<PB0)
+	out		DDRB, r16
+
+	sei
 
 	jmp MAIN
 
 
-ADC_INIT:
-	ldi		r16, (0<<REFS1)|(0<<REF0)||(0<<ADLAR)(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0)
+ADC_INIT: 
+/*
+***ADC SETTINGS***
+AREF
+Left adjusted
+ADC0
+
+ADC always enabled
+Auto Trigger enabled
+Interrupt enabled
+Prescaler: 32 ((8MHz/32)= ADC_FREQ = 250KHz)
+Free Running mode (SIFOR defaults to Free Running)
+*/
+	ldi		r16, (0<<REFS1)|(0<<REFS0)|(0<<ADLAR)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0)
 	out		ADMUX, r16
 
-	ldi		r16, (1<<ADEN)|(1<<ADSC)|(1<<ADATE)(1<<ADIE)|(1<<ADPS2)|(0<<ADPS1)|(1<<ADPS0) 
+	ldi		r16, (1<<ADEN)|(1<<ADSC)|(1<<ADATE)|(1<<ADIE)|(1<<ADPS2)|(0<<ADPS1)|(1<<ADPS0) 
 	out		ADCSRA, r16
-
-	ldi		r16, 
-	out		SIFOR, r16
 
 	ret
 
@@ -36,11 +48,20 @@ MAIN:
 	jmp MAIN
 
 
-
-
-
 ADC_ISR:
+	in		r16, ADCL
 
+	cpi		r16, 0x0F
+	brlo	NO_OVER_CURRENT
+	 
+	ldi		r16, (0<<PB0)
+	out		PORTB, r16
+	jmp		ADC_DONE
 
+NO_OVER_CURRENT:
+	ldi		r16, (0<<PB0)
+	out		PORTB, r16
+
+ADC_DONE:
 
 	reti
