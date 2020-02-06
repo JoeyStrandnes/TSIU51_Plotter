@@ -3,7 +3,7 @@
 <eagle version="9.5.2">
 <drawing>
 <settings>
-<setting alwaysvectorfont="no"/>
+<setting alwaysvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
 <grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
@@ -269,48 +269,6 @@ DIN A4, landscape with location and doc. field</description>
 <wire x1="-1.5" y1="-2.25" x2="1.5" y2="-2.25" width="0.1" layer="21"/>
 <wire x1="2.25" y1="0.5" x2="2.25" y2="-0.5" width="0.1" layer="21"/>
 </package>
-<package name="NHD0216XZFSWGBW">
-<description>&lt;b&gt;NHD-0216XZ-FSW-GBW&lt;/b&gt;&lt;br&gt;
-</description>
-<pad name="1" x="-32.5" y="16" drill="1.2" diameter="1.8"/>
-<pad name="2" x="-29.96" y="16" drill="1.2" diameter="1.8"/>
-<pad name="3" x="-27.42" y="16" drill="1.2" diameter="1.8"/>
-<pad name="4" x="-24.88" y="16" drill="1.2" diameter="1.8"/>
-<pad name="5" x="-22.34" y="16" drill="1.2" diameter="1.8"/>
-<pad name="6" x="-19.8" y="16" drill="1.2" diameter="1.8"/>
-<pad name="7" x="-17.26" y="16" drill="1.2" diameter="1.8"/>
-<pad name="8" x="-14.72" y="16" drill="1.2" diameter="1.8"/>
-<pad name="9" x="-12.18" y="16" drill="1.2" diameter="1.8"/>
-<pad name="10" x="-9.64" y="16" drill="1.2" diameter="1.8"/>
-<pad name="11" x="-7.1" y="16" drill="1.2" diameter="1.8"/>
-<pad name="12" x="-4.56" y="16" drill="1.2" diameter="1.8"/>
-<pad name="13" x="-2.02" y="16" drill="1.2" diameter="1.8"/>
-<pad name="14" x="0.52" y="16" drill="1.2" diameter="1.8"/>
-<pad name="15" x="3.06" y="16" drill="1.2" diameter="1.8"/>
-<pad name="16" x="5.6" y="16" drill="1.2" diameter="1.8"/>
-<pad name="17" x="-37.5" y="-15.5" drill="2.7" diameter="4.05"/>
-<pad name="18" x="37.5" y="-15.5" drill="2.7" diameter="4.05"/>
-<pad name="19" x="37.5" y="15.5" drill="2.7" diameter="4.05"/>
-<pad name="21" x="-37.5" y="15.5" drill="2.7" diameter="4.05"/>
-<text x="0" y="0" size="1.27" layer="25" align="center">&gt;NAME</text>
-<text x="0" y="0" size="1.27" layer="27" align="center">&gt;VALUE</text>
-<wire x1="-40" y1="18" x2="40" y2="18" width="0.2" layer="51"/>
-<wire x1="40" y1="18" x2="40" y2="-18" width="0.2" layer="51"/>
-<wire x1="40" y1="-18" x2="-40" y2="-18" width="0.2" layer="51"/>
-<wire x1="-40" y1="-18" x2="-40" y2="18" width="0.2" layer="51"/>
-<wire x1="-40" y1="18" x2="40" y2="18" width="0.1" layer="21"/>
-<wire x1="40" y1="18" x2="40" y2="-18" width="0.1" layer="21"/>
-<wire x1="40" y1="-18" x2="-40" y2="-18" width="0.1" layer="21"/>
-<wire x1="-40" y1="-18" x2="-40" y2="18" width="0.1" layer="21"/>
-<wire x1="-41" y1="19" x2="41" y2="19" width="0.1" layer="51"/>
-<wire x1="41" y1="19" x2="41" y2="-19" width="0.1" layer="51"/>
-<wire x1="41" y1="-19" x2="-41" y2="-19" width="0.1" layer="51"/>
-<wire x1="-41" y1="-19" x2="-41" y2="19" width="0.1" layer="51"/>
-<wire x1="-32.6" y1="18.5" x2="-32.6" y2="18.5" width="0.2" layer="21"/>
-<wire x1="-32.6" y1="18.5" x2="-32.4" y2="18.5" width="0.2" layer="21" curve="-180"/>
-<wire x1="-32.4" y1="18.5" x2="-32.4" y2="18.5" width="0.2" layer="21"/>
-<wire x1="-32.4" y1="18.5" x2="-32.6" y2="18.5" width="0.2" layer="21" curve="-180"/>
-</package>
 <package name="SOIC127P600X175-8N">
 <description>&lt;b&gt;SOIC127P600X175-8N&lt;/b&gt;&lt;br&gt;
 </description>
@@ -551,34 +509,6 @@ DIN A4, landscape with location and doc. field</description>
 <pin name="3" x="20.32" y="-2.54" length="middle" rot="R180"/>
 <pin name="4" x="20.32" y="0" length="middle" rot="R180"/>
 </symbol>
-<symbol name="NHD-0216XZ-FSW-GBW">
-<wire x1="5.08" y1="2.54" x2="22.86" y2="2.54" width="0.254" layer="94"/>
-<wire x1="22.86" y1="-25.4" x2="22.86" y2="2.54" width="0.254" layer="94"/>
-<wire x1="22.86" y1="-25.4" x2="5.08" y2="-25.4" width="0.254" layer="94"/>
-<wire x1="5.08" y1="2.54" x2="5.08" y2="-25.4" width="0.254" layer="94"/>
-<text x="24.13" y="7.62" size="1.778" layer="95" align="center-left">&gt;NAME</text>
-<text x="24.13" y="5.08" size="1.778" layer="96" align="center-left">&gt;VALUE</text>
-<pin name="VSS" x="0" y="0" length="middle"/>
-<pin name="VDD" x="0" y="-2.54" length="middle"/>
-<pin name="V0" x="0" y="-5.08" length="middle"/>
-<pin name="RS" x="0" y="-7.62" length="middle"/>
-<pin name="R/W" x="0" y="-10.16" length="middle"/>
-<pin name="E" x="0" y="-12.7" length="middle"/>
-<pin name="DB0" x="0" y="-15.24" length="middle"/>
-<pin name="DB1" x="0" y="-17.78" length="middle"/>
-<pin name="DB2" x="0" y="-20.32" length="middle"/>
-<pin name="DB3" x="0" y="-22.86" length="middle"/>
-<pin name="DB4" x="27.94" y="0" length="middle" rot="R180"/>
-<pin name="DB5" x="27.94" y="-2.54" length="middle" rot="R180"/>
-<pin name="DB6" x="27.94" y="-5.08" length="middle" rot="R180"/>
-<pin name="DB7" x="27.94" y="-7.62" length="middle" rot="R180"/>
-<pin name="LED+" x="27.94" y="-10.16" length="middle" rot="R180"/>
-<pin name="LED-" x="27.94" y="-12.7" length="middle" rot="R180"/>
-<pin name="MH1" x="27.94" y="-15.24" length="middle" rot="R180"/>
-<pin name="MH2" x="27.94" y="-17.78" length="middle" rot="R180"/>
-<pin name="MH3" x="27.94" y="-20.32" length="middle" rot="R180"/>
-<pin name="MH4" x="27.94" y="-22.86" length="middle" rot="R180"/>
-</symbol>
 <symbol name="LM2904DRG3">
 <wire x1="5.08" y1="2.54" x2="22.86" y2="2.54" width="0.254" layer="94"/>
 <wire x1="22.86" y1="-10.16" x2="22.86" y2="2.54" width="0.254" layer="94"/>
@@ -783,53 +713,6 @@ Source: &lt;a href="https://www.ckswitches.com/media/2567/pts647.pdf"&gt; Datash
 <attribute name="MANUFACTURER_PART_NUMBER" value="PTS647SM50SMTR2LFS" constant="no"/>
 <attribute name="MOUSER_PART_NUMBER" value="611-PTS647SM50SMTR2L" constant="no"/>
 <attribute name="MOUSER_PRICE-STOCK" value="https://www.mouser.com/Search/Refine.aspx?Keyword=611-PTS647SM50SMTR2L" constant="no"/>
-<attribute name="RS_PART_NUMBER" value="" constant="no"/>
-<attribute name="RS_PRICE-STOCK" value="" constant="no"/>
-</technology>
-</technologies>
-</device>
-</devices>
-</deviceset>
-<deviceset name="NHD-0216XZ-FSW-GBW" prefix="DS">
-<description>&lt;b&gt;LCD Character Display Modules &amp; Accessories STN- GRAY Transfl 80.0 x 36.0&lt;/b&gt;&lt;p&gt;
-Source: &lt;a href="http://www.newhavendisplay.com/specs/NHD-0216XZ-FSW-GBW.pdf"&gt; Datasheet &lt;/a&gt;</description>
-<gates>
-<gate name="G$1" symbol="NHD-0216XZ-FSW-GBW" x="0" y="0"/>
-</gates>
-<devices>
-<device name="" package="NHD0216XZFSWGBW">
-<connects>
-<connect gate="G$1" pin="DB0" pad="7"/>
-<connect gate="G$1" pin="DB1" pad="8"/>
-<connect gate="G$1" pin="DB2" pad="9"/>
-<connect gate="G$1" pin="DB3" pad="10"/>
-<connect gate="G$1" pin="DB4" pad="11"/>
-<connect gate="G$1" pin="DB5" pad="12"/>
-<connect gate="G$1" pin="DB6" pad="13"/>
-<connect gate="G$1" pin="DB7" pad="14"/>
-<connect gate="G$1" pin="E" pad="6"/>
-<connect gate="G$1" pin="LED+" pad="15"/>
-<connect gate="G$1" pin="LED-" pad="16"/>
-<connect gate="G$1" pin="MH1" pad="17"/>
-<connect gate="G$1" pin="MH2" pad="18"/>
-<connect gate="G$1" pin="MH3" pad="19"/>
-<connect gate="G$1" pin="MH4" pad="21"/>
-<connect gate="G$1" pin="R/W" pad="5"/>
-<connect gate="G$1" pin="RS" pad="4"/>
-<connect gate="G$1" pin="V0" pad="3"/>
-<connect gate="G$1" pin="VDD" pad="2"/>
-<connect gate="G$1" pin="VSS" pad="1"/>
-</connects>
-<technologies>
-<technology name="">
-<attribute name="ALLIED_NUMBER" value="70518104" constant="no"/>
-<attribute name="ALLIED_PRICE-STOCK" value="https://www.alliedelec.com/newhaven-display-international-nhd-0216xz-fsw-gbw/70518104/" constant="no"/>
-<attribute name="DESCRIPTION" value="LCD Character Display Modules &amp; Accessories STN- GRAY Transfl 80.0 x 36.0" constant="no"/>
-<attribute name="HEIGHT" value="7mm" constant="no"/>
-<attribute name="MANUFACTURER_NAME" value="Newhaven Display" constant="no"/>
-<attribute name="MANUFACTURER_PART_NUMBER" value="NHD-0216XZ-FSW-GBW" constant="no"/>
-<attribute name="MOUSER_PART_NUMBER" value="763-0216XZ-FSW-GBW" constant="no"/>
-<attribute name="MOUSER_PRICE-STOCK" value="https://www.mouser.com/Search/Refine.aspx?Keyword=763-0216XZ-FSW-GBW" constant="no"/>
 <attribute name="RS_PART_NUMBER" value="" constant="no"/>
 <attribute name="RS_PRICE-STOCK" value="" constant="no"/>
 </technology>
@@ -9178,6 +9061,128 @@ Source: AVX .. aphvc.pdf</description>
 </deviceset>
 </devicesets>
 </library>
+<library name="JM16A-Vanheden">
+<description>&lt;LCD Character Display Modules &amp; Accessories STN- GRAY Transfl 80.0 x 36.0&lt;/b&gt;&lt;p&gt;
+&lt;author&gt;Created by SamacSys&lt;/author&gt;</description>
+<packages>
+<package name="JM16A">
+<description>&lt;b&gt;NHD-0216XZ-FSW-GBW&lt;/b&gt;&lt;br&gt;
+</description>
+<pad name="1" x="13.34" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="2" x="15.88" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="3" x="18.42" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="4" x="20.96" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="5" x="23.5" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="6" x="26.04" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="7" x="28.58" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="8" x="31.12" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="9" x="33.66" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="10" x="36.2" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="11" x="38.74" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="12" x="41.28" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="13" x="43.82" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="14" x="46.36" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="15" x="48.9" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="16" x="51.44" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="MOUNT-3" x="2.521" y="-41.55" drill="2.7" diameter="4.05"/>
+<pad name="MOUNT-4" x="81.85" y="-41.55" drill="2.7" diameter="4.05"/>
+<pad name="MOUNT-2" x="81.85" y="-2.55" drill="2.7" diameter="4.05"/>
+<pad name="MOUNT-1" x="2.521" y="-2.55" drill="2.7" diameter="4.05"/>
+<text x="1.021" y="3.03" size="1.27" layer="25">&gt;NAME</text>
+<text x="1.021" y="1.49" size="1.27" layer="27">&gt;VALUE</text>
+<wire x1="0.021" y1="-0.05" x2="84.021" y2="-0.05" width="0.1" layer="21"/>
+<wire x1="84.021" y1="-0.05" x2="84.021" y2="-44.05" width="0.1" layer="21"/>
+<wire x1="84.021" y1="-44.05" x2="0.021" y2="-44.05" width="0.1" layer="21"/>
+<wire x1="0.021" y1="-44.05" x2="0.021" y2="-0.05" width="0.1" layer="21"/>
+<wire x1="12.421" y1="-3.55" x2="12.621" y2="-3.55" width="0.2" layer="21" curve="-180"/>
+<wire x1="12.621" y1="-3.55" x2="12.421" y2="-3.55" width="0.2" layer="21" curve="-180"/>
+<dimension x1="0" y1="1" x2="13.3" y2="1" x3="6.65" y3="6" textsize="1.778" layer="51"/>
+<dimension x1="2.4" y1="-2.6" x2="81.8" y2="-2.5" x3="42.078421875" y3="14.58460625" textsize="1.778" layer="51"/>
+<dimension x1="2.4" y1="-2.7" x2="2.3" y2="-41.7" x3="-5.355334375" y3="-22.180240625" textsize="1.778" layer="51"/>
+<dimension x1="4.021" y1="-44.05" x2="4.021" y2="-0.05" x3="-10" y3="-22.05" textsize="1.778" layer="51"/>
+<dimension x1="0.021" y1="-0.05" x2="84.021" y2="-0.05" x3="42.021" y3="18" textsize="1.778" layer="51"/>
+</package>
+</packages>
+<symbols>
+<symbol name="JM16A">
+<wire x1="5.08" y1="2.54" x2="22.86" y2="2.54" width="0.254" layer="94"/>
+<wire x1="22.86" y1="-25.4" x2="22.86" y2="2.54" width="0.254" layer="94"/>
+<wire x1="22.86" y1="-25.4" x2="5.08" y2="-25.4" width="0.254" layer="94"/>
+<wire x1="5.08" y1="2.54" x2="5.08" y2="-25.4" width="0.254" layer="94"/>
+<text x="24.13" y="7.62" size="1.778" layer="95" align="center-left">&gt;NAME</text>
+<text x="24.13" y="5.08" size="1.778" layer="96" align="center-left">&gt;VALUE</text>
+<pin name="VSS" x="0" y="0" length="middle"/>
+<pin name="VDD" x="0" y="-2.54" length="middle"/>
+<pin name="V0" x="0" y="-5.08" length="middle"/>
+<pin name="RS" x="0" y="-7.62" length="middle"/>
+<pin name="R/W" x="0" y="-10.16" length="middle"/>
+<pin name="E" x="0" y="-12.7" length="middle"/>
+<pin name="DB0" x="0" y="-15.24" length="middle"/>
+<pin name="DB1" x="0" y="-17.78" length="middle"/>
+<pin name="DB2" x="0" y="-20.32" length="middle"/>
+<pin name="DB3" x="0" y="-22.86" length="middle"/>
+<pin name="DB4" x="27.94" y="0" length="middle" rot="R180"/>
+<pin name="DB5" x="27.94" y="-2.54" length="middle" rot="R180"/>
+<pin name="DB6" x="27.94" y="-5.08" length="middle" rot="R180"/>
+<pin name="DB7" x="27.94" y="-7.62" length="middle" rot="R180"/>
+<pin name="LED+" x="27.94" y="-10.16" length="middle" rot="R180"/>
+<pin name="LED-" x="27.94" y="-12.7" length="middle" rot="R180"/>
+<pin name="MOUNT-1" x="10.16" y="-30.48" visible="pad" length="middle" rot="R90"/>
+<pin name="MOUNT-2" x="12.7" y="-30.48" visible="pad" length="middle" rot="R90"/>
+<pin name="MOUNT-3" x="15.24" y="-30.48" visible="pad" length="middle" rot="R90"/>
+<pin name="MOUNT-4" x="17.78" y="-30.48" visible="pad" length="middle" rot="R90"/>
+</symbol>
+</symbols>
+<devicesets>
+<deviceset name="JM16A" prefix="DS">
+<description>&lt;b&gt;LCD Character Display Modules &amp; Accessories STN- GRAY Transfl 80.0 x 36.0&lt;/b&gt;&lt;p&gt;
+Source: &lt;a href="http://www.newhavendisplay.com/specs/NHD-0216XZ-FSW-GBW.pdf"&gt; Datasheet &lt;/a&gt;</description>
+<gates>
+<gate name="G$1" symbol="JM16A" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="JM16A">
+<connects>
+<connect gate="G$1" pin="DB0" pad="7"/>
+<connect gate="G$1" pin="DB1" pad="8"/>
+<connect gate="G$1" pin="DB2" pad="9"/>
+<connect gate="G$1" pin="DB3" pad="10"/>
+<connect gate="G$1" pin="DB4" pad="11"/>
+<connect gate="G$1" pin="DB5" pad="12"/>
+<connect gate="G$1" pin="DB6" pad="13"/>
+<connect gate="G$1" pin="DB7" pad="14"/>
+<connect gate="G$1" pin="E" pad="6"/>
+<connect gate="G$1" pin="LED+" pad="15"/>
+<connect gate="G$1" pin="LED-" pad="16"/>
+<connect gate="G$1" pin="MOUNT-1" pad="MOUNT-3"/>
+<connect gate="G$1" pin="MOUNT-2" pad="MOUNT-4"/>
+<connect gate="G$1" pin="MOUNT-3" pad="MOUNT-2"/>
+<connect gate="G$1" pin="MOUNT-4" pad="MOUNT-1"/>
+<connect gate="G$1" pin="R/W" pad="5"/>
+<connect gate="G$1" pin="RS" pad="4"/>
+<connect gate="G$1" pin="V0" pad="3"/>
+<connect gate="G$1" pin="VDD" pad="2"/>
+<connect gate="G$1" pin="VSS" pad="1"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="ALLIED_NUMBER" value="70518104" constant="no"/>
+<attribute name="ALLIED_PRICE-STOCK" value="https://www.alliedelec.com/newhaven-display-international-nhd-0216xz-fsw-gbw/70518104/" constant="no"/>
+<attribute name="DESCRIPTION" value="LCD Character Display Modules &amp; Accessories STN- GRAY Transfl 80.0 x 36.0" constant="no"/>
+<attribute name="HEIGHT" value="7mm" constant="no"/>
+<attribute name="MANUFACTURER_NAME" value="Newhaven Display" constant="no"/>
+<attribute name="MANUFACTURER_PART_NUMBER" value="NHD-0216XZ-FSW-GBW" constant="no"/>
+<attribute name="MOUSER_PART_NUMBER" value="763-0216XZ-FSW-GBW" constant="no"/>
+<attribute name="MOUSER_PRICE-STOCK" value="https://www.mouser.com/Search/Refine.aspx?Keyword=763-0216XZ-FSW-GBW" constant="no"/>
+<attribute name="RS_PART_NUMBER" value="" constant="no"/>
+<attribute name="RS_PRICE-STOCK" value="" constant="no"/>
+</technology>
+</technologies>
+</device>
+</devices>
+</deviceset>
+</devicesets>
+</library>
 </libraries>
 <attributes>
 </attributes>
@@ -9208,7 +9213,6 @@ Source: AVX .. aphvc.pdf</description>
 <part name="SUPPLY5" library="supply2" library_urn="urn:adsk.eagle:library:372" deviceset="+5V/1" device=""/>
 <part name="S2" library="SamacSys_Parts" deviceset="PTS647SM50SMTR2LFS" device=""/>
 <part name="R4" library="rcl" library_urn="urn:adsk.eagle:library:334" deviceset="R-EU_" device="R0603" package3d_urn="urn:adsk.eagle:package:23555/3" value="10K/10%"/>
-<part name="DS1" library="SamacSys_Parts" deviceset="NHD-0216XZ-FSW-GBW" device=""/>
 <part name="GND6" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 <part name="SUPPLY6" library="supply2" library_urn="urn:adsk.eagle:library:372" deviceset="+5V/1" device=""/>
 <part name="FRAME2" library="frames" library_urn="urn:adsk.eagle:library:229" deviceset="A4L-LOC" device=""/>
@@ -9248,6 +9252,7 @@ Source: AVX .. aphvc.pdf</description>
 <part name="SUPPLY13" library="supply2" library_urn="urn:adsk.eagle:library:372" deviceset="+5V/1" device=""/>
 <part name="FRAME3" library="frames" library_urn="urn:adsk.eagle:library:229" deviceset="A4L-LOC" device=""/>
 <part name="C7" library="SamacSys_Parts" deviceset="EEEFK1J220P" device=""/>
+<part name="DS2" library="JM16A-Vanheden" deviceset="JM16A" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -9904,19 +9909,15 @@ Source: AVX .. aphvc.pdf</description>
 <attribute name="LAST_DATE_TIME" x="217.17" y="10.16" size="2.286" layer="94"/>
 <attribute name="SHEET" x="230.505" y="5.08" size="2.54" layer="94"/>
 </instance>
-<instance part="DS1" gate="G$1" x="66.04" y="104.14" smashed="yes">
-<attribute name="NAME" x="72.39" y="111.76" size="1.778" layer="95" align="center-left"/>
-<attribute name="VALUE" x="72.39" y="109.22" size="1.778" layer="96" align="center-left"/>
-</instance>
-<instance part="GND6" gate="1" x="55.88" y="50.8" smashed="yes">
-<attribute name="VALUE" x="53.34" y="48.26" size="1.778" layer="96"/>
+<instance part="GND6" gate="1" x="53.34" y="50.8" smashed="yes">
+<attribute name="VALUE" x="50.8" y="48.26" size="1.778" layer="96"/>
 </instance>
 <instance part="SUPPLY6" gate="G$1" x="63.5" y="137.16" smashed="yes">
 <attribute name="VALUE" x="60.325" y="140.335" size="1.778" layer="96"/>
 </instance>
-<instance part="VR1" gate="G$1" x="33.02" y="99.06" smashed="yes">
-<attribute name="NAME" x="36.83" y="106.68" size="1.778" layer="95" align="center-left"/>
-<attribute name="VALUE" x="36.83" y="104.14" size="1.778" layer="96" align="center-left"/>
+<instance part="VR1" gate="G$1" x="30.48" y="99.06" smashed="yes">
+<attribute name="NAME" x="34.29" y="106.68" size="1.778" layer="95" align="center-left"/>
+<attribute name="VALUE" x="34.29" y="104.14" size="1.778" layer="96" align="center-left"/>
 </instance>
 <instance part="JP1" gate="A" x="187.96" y="91.44" smashed="yes" rot="R180">
 <attribute name="NAME" x="186.69" y="102.235" size="1.778" layer="95"/>
@@ -9928,22 +9929,43 @@ Source: AVX .. aphvc.pdf</description>
 <instance part="SUPPLY9" gate="G$1" x="205.74" y="111.76" smashed="yes">
 <attribute name="VALUE" x="202.565" y="114.935" size="1.778" layer="96"/>
 </instance>
+<instance part="DS2" gate="G$1" x="66.04" y="104.14" smashed="yes">
+<attribute name="NAME" x="72.39" y="111.76" size="1.778" layer="95" align="center-left"/>
+<attribute name="VALUE" x="72.39" y="109.22" size="1.778" layer="96" align="center-left"/>
+</instance>
 </instances>
 <busses>
 </busses>
 <nets>
 <net name="GND" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="VSS"/>
-<wire x1="66.04" y1="104.14" x2="55.88" y2="104.14" width="0.1524" layer="91"/>
-<wire x1="55.88" y1="104.14" x2="55.88" y2="91.44" width="0.1524" layer="91"/>
+<wire x1="66.04" y1="104.14" x2="53.34" y2="104.14" width="0.1524" layer="91"/>
+<wire x1="53.34" y1="104.14" x2="53.34" y2="91.44" width="0.1524" layer="91"/>
 <pinref part="GND6" gate="1" pin="GND"/>
 <pinref part="VR1" gate="G$1" pin="C"/>
-<wire x1="55.88" y1="91.44" x2="55.88" y2="53.34" width="0.1524" layer="91"/>
-<wire x1="33.02" y1="96.52" x2="30.48" y2="96.52" width="0.1524" layer="91"/>
-<wire x1="30.48" y1="96.52" x2="30.48" y2="91.44" width="0.1524" layer="91"/>
-<wire x1="30.48" y1="91.44" x2="55.88" y2="91.44" width="0.1524" layer="91"/>
-<junction x="55.88" y="91.44"/>
+<wire x1="53.34" y1="91.44" x2="53.34" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="53.34" y1="71.12" x2="53.34" y2="53.34" width="0.1524" layer="91"/>
+<wire x1="30.48" y1="96.52" x2="27.94" y2="96.52" width="0.1524" layer="91"/>
+<wire x1="27.94" y1="96.52" x2="27.94" y2="91.44" width="0.1524" layer="91"/>
+<wire x1="27.94" y1="91.44" x2="53.34" y2="91.44" width="0.1524" layer="91"/>
+<junction x="53.34" y="91.44"/>
+<pinref part="DS2" gate="G$1" pin="VSS"/>
+<pinref part="DS2" gate="G$1" pin="MOUNT-1"/>
+<wire x1="76.2" y1="73.66" x2="76.2" y2="71.12" width="0.1524" layer="91"/>
+<wire x1="76.2" y1="71.12" x2="78.74" y2="71.12" width="0.1524" layer="91"/>
+<pinref part="DS2" gate="G$1" pin="MOUNT-2"/>
+<wire x1="78.74" y1="71.12" x2="78.74" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="78.74" y1="71.12" x2="81.28" y2="71.12" width="0.1524" layer="91"/>
+<junction x="78.74" y="71.12"/>
+<pinref part="DS2" gate="G$1" pin="MOUNT-3"/>
+<wire x1="81.28" y1="71.12" x2="81.28" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="81.28" y1="71.12" x2="83.82" y2="71.12" width="0.1524" layer="91"/>
+<junction x="81.28" y="71.12"/>
+<pinref part="DS2" gate="G$1" pin="MOUNT-4"/>
+<wire x1="83.82" y1="71.12" x2="83.82" y2="73.66" width="0.1524" layer="91"/>
+<wire x1="76.2" y1="71.12" x2="53.34" y2="71.12" width="0.1524" layer="91"/>
+<junction x="76.2" y="71.12"/>
+<junction x="53.34" y="71.12"/>
 </segment>
 <segment>
 <pinref part="JP1" gate="A" pin="2"/>
@@ -9954,16 +9976,16 @@ Source: AVX .. aphvc.pdf</description>
 </net>
 <net name="+5V/1" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="VDD"/>
 <wire x1="66.04" y1="101.6" x2="63.5" y2="101.6" width="0.1524" layer="91"/>
 <pinref part="SUPPLY6" gate="G$1" pin="+5V/1"/>
 <wire x1="63.5" y1="101.6" x2="63.5" y2="114.3" width="0.1524" layer="91"/>
 <pinref part="VR1" gate="G$1" pin="A"/>
 <wire x1="63.5" y1="114.3" x2="63.5" y2="134.62" width="0.1524" layer="91"/>
-<wire x1="33.02" y1="99.06" x2="30.48" y2="99.06" width="0.1524" layer="91"/>
-<wire x1="30.48" y1="99.06" x2="30.48" y2="114.3" width="0.1524" layer="91"/>
-<wire x1="30.48" y1="114.3" x2="63.5" y2="114.3" width="0.1524" layer="91"/>
+<wire x1="30.48" y1="99.06" x2="27.94" y2="99.06" width="0.1524" layer="91"/>
+<wire x1="27.94" y1="99.06" x2="27.94" y2="114.3" width="0.1524" layer="91"/>
+<wire x1="27.94" y1="114.3" x2="63.5" y2="114.3" width="0.1524" layer="91"/>
 <junction x="63.5" y="114.3"/>
+<pinref part="DS2" gate="G$1" pin="VDD"/>
 </segment>
 <segment>
 <pinref part="JP1" gate="A" pin="1"/>
@@ -9988,86 +10010,86 @@ Source: AVX .. aphvc.pdf</description>
 </net>
 <net name="LCD-DB0" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB0"/>
 <wire x1="66.04" y1="88.9" x2="63.5" y2="88.9" width="0.1524" layer="91"/>
 <label x="63.5" y="88.9" size="0.8128" layer="95" rot="R180" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB0"/>
 </segment>
 </net>
 <net name="LCD-DB1" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB1"/>
 <wire x1="66.04" y1="86.36" x2="63.5" y2="86.36" width="0.1524" layer="91"/>
 <label x="63.5" y="86.36" size="0.8128" layer="95" rot="R180" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB1"/>
 </segment>
 </net>
 <net name="LCD-DB2" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB2"/>
 <wire x1="66.04" y1="83.82" x2="63.5" y2="83.82" width="0.1524" layer="91"/>
 <label x="63.5" y="83.82" size="0.8128" layer="95" rot="R180" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB2"/>
 </segment>
 </net>
 <net name="LCD-DB3" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB3"/>
 <wire x1="66.04" y1="81.28" x2="63.5" y2="81.28" width="0.1524" layer="91"/>
 <label x="63.5" y="81.28" size="0.8128" layer="95" rot="R180" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB3"/>
 </segment>
 </net>
 <net name="LCD-DB4" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB4"/>
 <wire x1="93.98" y1="104.14" x2="96.52" y2="104.14" width="0.1524" layer="91"/>
 <label x="96.52" y="104.14" size="0.8128" layer="95" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB4"/>
 </segment>
 </net>
 <net name="LCD-DB5" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB5"/>
 <wire x1="93.98" y1="101.6" x2="96.52" y2="101.6" width="0.1524" layer="91"/>
 <label x="96.52" y="101.6" size="0.8128" layer="95" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB5"/>
 </segment>
 </net>
 <net name="LCD-DB6" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB6"/>
 <wire x1="93.98" y1="99.06" x2="96.52" y2="99.06" width="0.1524" layer="91"/>
 <label x="96.52" y="99.06" size="0.8128" layer="95" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB6"/>
 </segment>
 </net>
 <net name="LCD-DB7" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="DB7"/>
 <wire x1="93.98" y1="96.52" x2="96.52" y2="96.52" width="0.1524" layer="91"/>
 <label x="96.52" y="96.52" size="0.8128" layer="95" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="DB7"/>
 </segment>
 </net>
 <net name="LCD-RS" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="RS"/>
 <wire x1="66.04" y1="96.52" x2="63.5" y2="96.52" width="0.1524" layer="91"/>
 <label x="63.5" y="96.52" size="0.8128" layer="95" rot="R180" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="RS"/>
 </segment>
 </net>
 <net name="LCD-R/W" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="R/W"/>
 <wire x1="66.04" y1="93.98" x2="63.5" y2="93.98" width="0.1524" layer="91"/>
 <label x="63.5" y="93.98" size="0.8128" layer="95" rot="R180" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="R/W"/>
 </segment>
 </net>
 <net name="LCD-E" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="E"/>
 <wire x1="66.04" y1="91.44" x2="63.5" y2="91.44" width="0.1524" layer="91"/>
 <label x="63.5" y="91.44" size="0.8128" layer="95" rot="R180" xref="yes"/>
+<pinref part="DS2" gate="G$1" pin="E"/>
 </segment>
 </net>
 <net name="N$2" class="0">
 <segment>
-<pinref part="DS1" gate="G$1" pin="V0"/>
 <pinref part="VR1" gate="G$1" pin="B"/>
-<wire x1="66.04" y1="99.06" x2="53.34" y2="99.06" width="0.1524" layer="91"/>
+<wire x1="66.04" y1="99.06" x2="50.8" y2="99.06" width="0.1524" layer="91"/>
+<pinref part="DS2" gate="G$1" pin="V0"/>
 </segment>
 </net>
 <net name="RGB-INT" class="0">

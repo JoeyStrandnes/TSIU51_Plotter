@@ -7,7 +7,7 @@
 <setting keepoldvectorfont="yes"/>
 <setting verticaltext="up"/>
 </settings>
-<grid distance="1" unitdist="mm" unit="mm" style="lines" multiple="1" display="yes" altdistance="0.1" altunitdist="mm" altunit="mm"/>
+<grid distance="50" unitdist="mil" unit="mil" style="lines" multiple="1" display="yes" altdistance="5" altunitdist="mil" altunit="mil"/>
 <layers>
 <layer number="1" name="Top" color="4" fill="1" visible="yes" active="yes"/>
 <layer number="16" name="Bottom" color="1" fill="1" visible="yes" active="yes"/>
@@ -63,42 +63,39 @@
 <package name="JM16A">
 <description>&lt;b&gt;NHD-0216XZ-FSW-GBW&lt;/b&gt;&lt;br&gt;
 </description>
-<pad name="1" x="8.521" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="2" x="11.061" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="3" x="13.601" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="4" x="16.141" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="5" x="18.681" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="6" x="21.221" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="7" x="23.761" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="8" x="26.301" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="9" x="28.841" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="10" x="31.381" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="11" x="33.921" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="12" x="36.461" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="13" x="39.001" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="14" x="41.541" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="15" x="44.081" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="16" x="46.621" y="-3.05" drill="1.2" diameter="1.8"/>
-<pad name="17" x="3.521" y="-47.5" drill="2.7" diameter="4.05"/>
-<pad name="18" x="82.85" y="-47.5" drill="2.7" diameter="4.05"/>
-<pad name="19" x="82.85" y="-3.55" drill="2.7" diameter="4.05"/>
-<pad name="21" x="3.521" y="-3.55" drill="2.7" diameter="4.05"/>
-<text x="0.021" y="3.03" size="1.27" layer="25" align="center">&gt;NAME</text>
-<text x="0.021" y="1.49" size="1.27" layer="27" align="center">&gt;VALUE</text>
-<wire x1="1.021" y1="-1.05" x2="85.021" y2="-1.05" width="0.2" layer="51"/>
-<wire x1="85.021" y1="-1.05" x2="85.021" y2="-50.05" width="0.2" layer="51"/>
-<wire x1="85.021" y1="-50.05" x2="1.021" y2="-50.05" width="0.2" layer="51"/>
-<wire x1="1.021" y1="-50.05" x2="1.021" y2="-1.05" width="0.2" layer="51"/>
-<wire x1="1.021" y1="-1.05" x2="85.021" y2="-1.05" width="0.1" layer="21"/>
-<wire x1="85.021" y1="-1.05" x2="85.021" y2="-50.05" width="0.1" layer="21"/>
-<wire x1="85.021" y1="-50.05" x2="1.021" y2="-50.05" width="0.1" layer="21"/>
-<wire x1="1.021" y1="-50.05" x2="1.021" y2="-1.05" width="0.1" layer="21"/>
-<wire x1="0.021" y1="-0.05" x2="86.021" y2="-0.05" width="0.1" layer="51"/>
-<wire x1="86.021" y1="-0.05" x2="86.021" y2="-51.05" width="0.1" layer="51"/>
-<wire x1="86.021" y1="-51.05" x2="0.021" y2="-51.05" width="0.1" layer="51"/>
-<wire x1="0.021" y1="-51.05" x2="0.021" y2="-0.05" width="0.1" layer="51"/>
-<wire x1="8.421" y1="-0.55" x2="8.621" y2="-0.55" width="0.2" layer="21" curve="-180"/>
-<wire x1="8.621" y1="-0.55" x2="8.421" y2="-0.55" width="0.2" layer="21" curve="-180"/>
+<pad name="1" x="13.34" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="2" x="15.88" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="3" x="18.42" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="4" x="20.96" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="5" x="23.5" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="6" x="26.04" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="7" x="28.58" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="8" x="31.12" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="9" x="33.66" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="10" x="36.2" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="11" x="38.74" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="12" x="41.28" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="13" x="43.82" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="14" x="46.36" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="15" x="48.9" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="16" x="51.44" y="-1.542" drill="1.2" diameter="1.8"/>
+<pad name="MOUNT-3" x="2.521" y="-41.55" drill="2.7" diameter="4.05"/>
+<pad name="MOUNT-4" x="81.85" y="-41.55" drill="2.7" diameter="4.05"/>
+<pad name="MOUNT-2" x="81.85" y="-2.55" drill="2.7" diameter="4.05"/>
+<pad name="MOUNT-1" x="2.521" y="-2.55" drill="2.7" diameter="4.05"/>
+<text x="1.021" y="3.03" size="1.27" layer="25">&gt;NAME</text>
+<text x="1.021" y="1.49" size="1.27" layer="27">&gt;VALUE</text>
+<wire x1="0.021" y1="-0.05" x2="84.021" y2="-0.05" width="0.1" layer="21"/>
+<wire x1="84.021" y1="-0.05" x2="84.021" y2="-44.05" width="0.1" layer="21"/>
+<wire x1="84.021" y1="-44.05" x2="0.021" y2="-44.05" width="0.1" layer="21"/>
+<wire x1="0.021" y1="-44.05" x2="0.021" y2="-0.05" width="0.1" layer="21"/>
+<wire x1="12.421" y1="-3.55" x2="12.621" y2="-3.55" width="0.2" layer="21" curve="-180"/>
+<wire x1="12.621" y1="-3.55" x2="12.421" y2="-3.55" width="0.2" layer="21" curve="-180"/>
+<dimension x1="0" y1="1" x2="13.3" y2="1" x3="6.65" y3="6" textsize="1.778" layer="51"/>
+<dimension x1="2.4" y1="-2.6" x2="81.8" y2="-2.5" x3="42.078421875" y3="14.58460625" textsize="1.778" layer="51"/>
+<dimension x1="2.4" y1="-2.7" x2="2.3" y2="-41.7" x3="-5.355334375" y3="-22.180240625" textsize="1.778" layer="51"/>
+<dimension x1="4.021" y1="-44.05" x2="4.021" y2="-0.05" x3="-10" y3="-22.05" textsize="1.778" layer="51"/>
+<dimension x1="0.021" y1="-0.05" x2="84.021" y2="-0.05" x3="42.021" y3="18" textsize="1.778" layer="51"/>
 </package>
 </packages>
 <symbols>
@@ -152,6 +149,10 @@ Source: &lt;a href="http://www.newhavendisplay.com/specs/NHD-0216XZ-FSW-GBW.pdf"
 <connect gate="G$1" pin="E" pad="6"/>
 <connect gate="G$1" pin="LED+" pad="15"/>
 <connect gate="G$1" pin="LED-" pad="16"/>
+<connect gate="G$1" pin="MOUNT-1" pad="MOUNT-3"/>
+<connect gate="G$1" pin="MOUNT-2" pad="MOUNT-4"/>
+<connect gate="G$1" pin="MOUNT-3" pad="MOUNT-2"/>
+<connect gate="G$1" pin="MOUNT-4" pad="MOUNT-1"/>
 <connect gate="G$1" pin="R/W" pad="5"/>
 <connect gate="G$1" pin="RS" pad="4"/>
 <connect gate="G$1" pin="V0" pad="3"/>
