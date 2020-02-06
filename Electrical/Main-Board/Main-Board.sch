@@ -3,7 +3,7 @@
 <eagle version="9.5.2">
 <drawing>
 <settings>
-<setting alwaysvectorfont="yes"/>
+<setting alwaysvectorfont="no"/>
 <setting verticaltext="up"/>
 </settings>
 <grid distance="0.1" unitdist="inch" unit="inch" style="lines" multiple="1" display="no" altdistance="0.01" altunitdist="inch" altunit="inch"/>
@@ -451,6 +451,26 @@ DIN A4, landscape with location and doc. field</description>
 <wire x1="-1.4" y1="0.1" x2="-1.4" y2="0.1" width="0.1" layer="21"/>
 <wire x1="-1.4" y1="0.1" x2="-1.4" y2="0" width="0.1" layer="21" curve="180"/>
 </package>
+<package name="CAPAE800X650N">
+<description>&lt;b&gt;EEEFK1J220P&lt;/b&gt;&lt;br&gt;
+</description>
+<smd name="1" x="-3.45" y="0" dx="4.2" dy="1.8" layer="1"/>
+<smd name="2" x="3.45" y="0" dx="4.2" dy="1.8" layer="1"/>
+<text x="0" y="0" size="1.27" layer="25" align="center">&gt;NAME</text>
+<text x="0" y="0" size="1.27" layer="27" align="center">&gt;VALUE</text>
+<wire x1="-6.05" y1="4.75" x2="6.05" y2="4.75" width="0.05" layer="51"/>
+<wire x1="6.05" y1="4.75" x2="6.05" y2="-4.75" width="0.05" layer="51"/>
+<wire x1="6.05" y1="-4.75" x2="-6.05" y2="-4.75" width="0.05" layer="51"/>
+<wire x1="-6.05" y1="-4.75" x2="-6.05" y2="4.75" width="0.05" layer="51"/>
+<wire x1="4" y1="4" x2="-2" y2="4" width="0.1" layer="51"/>
+<wire x1="-2" y1="4" x2="-4" y2="2" width="0.1" layer="51"/>
+<wire x1="-4" y1="2" x2="-4" y2="-2" width="0.1" layer="51"/>
+<wire x1="-4" y1="-2" x2="-2" y2="-4" width="0.1" layer="51"/>
+<wire x1="-2" y1="-4" x2="4" y2="-4" width="0.1" layer="51"/>
+<wire x1="4" y1="-4" x2="4" y2="4" width="0.1" layer="51"/>
+<wire x1="-5.55" y1="4" x2="4" y2="4" width="0.2" layer="21"/>
+<wire x1="-2" y1="-4" x2="4" y2="-4" width="0.2" layer="21"/>
+</package>
 </packages>
 <symbols>
 <symbol name="ATMEGA16A-PU">
@@ -618,6 +638,26 @@ DIN A4, landscape with location and doc. field</description>
 <pin name="Q1" x="0" y="-2.54" length="middle"/>
 <pin name="Q2" x="0" y="-5.08" length="middle"/>
 <pin name="GND" x="0" y="-7.62" length="middle"/>
+</symbol>
+<symbol name="EEEFK1J220P">
+<wire x1="5.08" y1="2.54" x2="5.08" y2="-2.54" width="0.254" layer="94"/>
+<wire x1="5.842" y1="-2.54" x2="5.08" y2="-2.54" width="0.254" layer="94"/>
+<wire x1="5.842" y1="-2.54" x2="5.842" y2="2.54" width="0.254" layer="94"/>
+<wire x1="5.08" y1="2.54" x2="5.842" y2="2.54" width="0.254" layer="94"/>
+<wire x1="4.572" y1="1.27" x2="3.556" y2="1.27" width="0.254" layer="94"/>
+<wire x1="4.064" y1="1.778" x2="4.064" y2="0.762" width="0.254" layer="94"/>
+<wire x1="2.54" y1="0" x2="5.08" y2="0" width="0.254" layer="94"/>
+<wire x1="7.62" y1="0" x2="10.16" y2="0" width="0.254" layer="94"/>
+<text x="8.89" y="6.35" size="1.778" layer="95" align="center-left">&gt;NAME</text>
+<text x="8.89" y="3.81" size="1.778" layer="96" align="center-left">&gt;VALUE</text>
+<pin name="+" x="0" y="0" visible="pad" length="short"/>
+<pin name="-" x="12.7" y="0" visible="pad" length="short" rot="R180"/>
+<polygon width="0.254" layer="94">
+<vertex x="7.62" y="2.54"/>
+<vertex x="7.62" y="-2.54"/>
+<vertex x="6.858" y="-2.54"/>
+<vertex x="6.858" y="2.54"/>
+</polygon>
 </symbol>
 </symbols>
 <devicesets>
@@ -941,6 +981,33 @@ Source: &lt;a href="https://www.infineon.com/dgdl/Infineon-TLE4966L-DS-v02_00-en
 <attribute name="MOUSER_PRICE-STOCK" value="https://www.mouser.com/Search/Refine.aspx?Keyword=726-TLE4966L" constant="no"/>
 <attribute name="RS_PART_NUMBER" value="" constant="no"/>
 <attribute name="RS_PRICE-STOCK" value="" constant="no"/>
+</technology>
+</technologies>
+</device>
+</devices>
+</deviceset>
+<deviceset name="EEEFK1J220P" prefix="C">
+<description>&lt;b&gt;Panasonic Aluminium Electrolytic Capacitor 22uF 63V dc 8mm E FK SMD Series, Surface Mount Electrolytic, +/-20%&lt;/b&gt;&lt;p&gt;
+Source: &lt;a href="https://industrial.panasonic.com/cdbs/www-data/pdf/RDE0000/ABA0000C1181.pdf"&gt; Datasheet &lt;/a&gt;</description>
+<gates>
+<gate name="G$1" symbol="EEEFK1J220P" x="0" y="0"/>
+</gates>
+<devices>
+<device name="" package="CAPAE800X650N">
+<connects>
+<connect gate="G$1" pin="+" pad="1"/>
+<connect gate="G$1" pin="-" pad="2"/>
+</connects>
+<technologies>
+<technology name="">
+<attribute name="DESCRIPTION" value="Panasonic Aluminium Electrolytic Capacitor 22uF 63V dc 8mm E FK SMD Series, Surface Mount Electrolytic, +/-20%" constant="no"/>
+<attribute name="HEIGHT" value="6.5mm" constant="no"/>
+<attribute name="MANUFACTURER_NAME" value="Panasonic" constant="no"/>
+<attribute name="MANUFACTURER_PART_NUMBER" value="EEEFK1J220P" constant="no"/>
+<attribute name="MOUSER_PART_NUMBER" value="" constant="no"/>
+<attribute name="MOUSER_PRICE-STOCK" value="" constant="no"/>
+<attribute name="RS_PART_NUMBER" value="7083598P" constant="no"/>
+<attribute name="RS_PRICE-STOCK" value="http://uk.rs-online.com/web/p/products/7083598P" constant="no"/>
 </technology>
 </technologies>
 </device>
@@ -9180,6 +9247,7 @@ Source: AVX .. aphvc.pdf</description>
 <part name="GND14" library="supply1" library_urn="urn:adsk.eagle:library:371" deviceset="GND" device=""/>
 <part name="SUPPLY13" library="supply2" library_urn="urn:adsk.eagle:library:372" deviceset="+5V/1" device=""/>
 <part name="FRAME3" library="frames" library_urn="urn:adsk.eagle:library:229" deviceset="A4L-LOC" device=""/>
+<part name="C7" library="SamacSys_Parts" deviceset="EEEFK1J220P" device=""/>
 </parts>
 <sheets>
 <sheet>
@@ -9330,8 +9398,12 @@ Source: AVX .. aphvc.pdf</description>
 <attribute name="NAME" x="214.884" y="43.561" size="1.778" layer="95"/>
 <attribute name="VALUE" x="214.884" y="38.481" size="1.778" layer="96"/>
 </instance>
-<instance part="SUPPLY7" gate="G$1" x="63.5" y="132.08" smashed="yes">
-<attribute name="VALUE" x="60.325" y="135.255" size="1.778" layer="96"/>
+<instance part="SUPPLY7" gate="G$1" x="63.5" y="137.16" smashed="yes">
+<attribute name="VALUE" x="60.325" y="140.335" size="1.778" layer="96"/>
+</instance>
+<instance part="C7" gate="G$1" x="71.12" y="127" smashed="yes" rot="R270">
+<attribute name="NAME" x="72.39" y="128.27" size="1.778" layer="95" align="center-left"/>
+<attribute name="VALUE" x="72.39" y="125.73" size="1.778" layer="96" align="center-left"/>
 </instance>
 </instances>
 <busses>
@@ -9391,10 +9463,15 @@ Source: AVX .. aphvc.pdf</description>
 <wire x1="355.6" y1="160.02" x2="355.6" y2="104.14" width="0.1524" layer="91"/>
 </segment>
 <segment>
-<wire x1="63.5" y1="119.38" x2="63.5" y2="104.14" width="0.1524" layer="91"/>
+<wire x1="63.5" y1="119.38" x2="63.5" y2="111.76" width="0.1524" layer="91"/>
 <pinref part="GND12" gate="1" pin="GND"/>
 <pinref part="J4" gate="G$1" pin="TIP"/>
+<wire x1="63.5" y1="111.76" x2="63.5" y2="104.14" width="0.1524" layer="91"/>
 <wire x1="60.96" y1="119.38" x2="63.5" y2="119.38" width="0.1524" layer="91"/>
+<pinref part="C7" gate="G$1" pin="-"/>
+<wire x1="71.12" y1="114.3" x2="71.12" y2="111.76" width="0.1524" layer="91"/>
+<wire x1="71.12" y1="111.76" x2="63.5" y2="111.76" width="0.1524" layer="91"/>
+<junction x="63.5" y="111.76"/>
 </segment>
 <segment>
 <pinref part="C1" gate="G$1" pin="2"/>
@@ -9510,8 +9587,13 @@ Source: AVX .. aphvc.pdf</description>
 <segment>
 <wire x1="63.5" y1="121.92" x2="63.5" y2="129.54" width="0.1524" layer="91"/>
 <pinref part="J4" gate="G$1" pin="SLEEVE"/>
+<wire x1="63.5" y1="129.54" x2="63.5" y2="134.62" width="0.1524" layer="91"/>
 <wire x1="60.96" y1="121.92" x2="63.5" y2="121.92" width="0.1524" layer="91"/>
 <pinref part="SUPPLY7" gate="G$1" pin="+5V/1"/>
+<pinref part="C7" gate="G$1" pin="+"/>
+<wire x1="71.12" y1="127" x2="71.12" y2="129.54" width="0.1524" layer="91"/>
+<wire x1="71.12" y1="129.54" x2="63.5" y2="129.54" width="0.1524" layer="91"/>
+<junction x="63.5" y="129.54"/>
 </segment>
 </net>
 <net name="TCK" class="0">
