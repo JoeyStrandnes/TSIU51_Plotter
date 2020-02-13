@@ -30,6 +30,7 @@ boot:
 	out SPL, r16
 
 	call TWI_INIT
+	call CONFIG
 	jmp MAIN
 
 TWI_INIT:
@@ -38,7 +39,7 @@ TWI_INIT:
 	ldi r16, 0x00
 	out DDRB, r16
 
-	ldi r16, 0x00
+	ldi r16, 0x0F
 	out TWBR, r16
 	ldi r16, 0x02
 	out TWSR, r16
@@ -55,7 +56,7 @@ CONFIG:
 	ori r17, RGB_COMMAND_BIT
 	call TWI_SEND_DATA
 
-	ldi r17, 0b00001011 // AEN 1, PON 1
+	ldi r17, 0b00000011 // AEN 1, PON 1
 	call TWI_SEND_DATA
 
 	call TWI_START_PULSE
@@ -66,15 +67,18 @@ CONFIG:
 	ori r17, RGB_COMMAND_BIT
 	call TWI_SEND_DATA
 
-	ldi r17, 0xC0
+	ldi r17, 0xFF
 	call TWI_SEND_DATA
+	ret
 
 MAIN:
-	//CATCH READ
-	rjmp MAIN
+	call READ_ONCE
+HoldLoop:
+	rjmp HoldLoop
 
 READ_ONCE:
-	call DELAY_INIT // WAIT FOR SKITTLE TO FALL DOWN
+	 // WAIT FOR SKITTLE TO FALL DOWN
+	call DELAY_INIT
 	call TWI_START_PULSE
 	ldi r17, RGB_SLAVE_ADDR
 	call SEND_ADDRESS_WRITE
@@ -89,8 +93,8 @@ READ_ONCE:
 
 	call TWI_READ_DATA_NACK
 	call TWI_STOP_PULSE
-	out PORTA, r17 // RED HIGH
-
+	//out PORTA, r17 // RED HIGH
+	ret
 
 ////////////////////////////SUB_ROUTINES///////////////////////////////////////////
 
@@ -161,6 +165,7 @@ TWI_WAIT:
 	rjmp TWI_WAIT
 	ret
 ///////////////////////////////////////////////////
+/*
 RGB_WAIT_FOR_COMPLETE_CONVERSION:
 	call TWI_START_PULSE
 	ldi r17, RGB_SLAVE_ADDR
@@ -178,6 +183,7 @@ RGB_WAIT_FOR_COMPLETE_CONVERSION_AGAIN:
 	sbrs r17, 0
 	jmp RGB_WAIT_FOR_COMPLETE_CONVERSION_AGAIN
 	ret
+	*/
 /////////////////////////////////////////////////////
 DELAY_INIT:
 	ldi r16, 0xFF
