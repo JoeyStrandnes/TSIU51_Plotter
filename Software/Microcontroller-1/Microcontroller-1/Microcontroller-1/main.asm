@@ -33,7 +33,7 @@ YELLOW_N:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 INIT_CLEAR_SRAM:
 	ldi r17, 6 //NUMBER OF BYTES TO CLEAR
-	clr r16
+	ldi r16, 0xC0 //SHOULD BE 0 but for debug purpse atm
 	ldi YH,HIGH(SRAM_START)
 	ldi YL,LOW(SRAM_START)
 INIT_CLEAR_SRAM_LOOP:
@@ -46,7 +46,7 @@ LCD_SETUP:
 	ldi r16, 0x00
 	out DDRD, r16 // DB0-DB7 set to READMODE as default, will change briefly when writing.
 	ldi r16, 0x07 
-	out DDRA , r16 // PIN0 - E, PIN1- R/W, PIN2 - RS set to WRITEMODE, will not change.
+	out DDRA, r16 // PIN0 - E, PIN1- R/W, PIN2 - RS set to WRITEMODE, will not change.
 
 	ldi r20, 0b00111100 // 2_line_5x8_mode 
 	call LCD_INSTRUCTION_WRITE
@@ -73,24 +73,53 @@ MAIN:
 	ldi r20, 'O'
 	call LCD_DATA_WRITE
 	
+	ldi YH, HIGH(GREEN_N)
+	ldi YL, LOW(GREEN_N)
+	call LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN
 DO_NOTHING:
 	jmp DO_NOTHING
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//TODO: MAKE IT TAKE REGISTER AND MAKE ANOTHER FUNCTION FOR Y-POINTER?
+LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN: //LOADS FROM SRAM WITH Y-POINTER AS ARGUMENT, DDRAM ADRESS SHOULD BE SET BEFORE WITH AUTO INC-MODE! 
+	push r16
+	push r17
+	ldi r16, 8
+	ld r17, Y
+LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN_LOOP:	
+	lsl r17
+	brcc LCD_OUTPUT_BIT_AS_ZERO
+	ldi r20, '1'
+	rjmp LCD_OUTPUT_BIT
+LCD_OUTPUT_BIT_AS_ZERO:
+	ldi r20, '0'
+LCD_OUTPUT_BIT:
+	call LCD_DATA_WRITE
+	dec r16
+	brne LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN_LOOP
 
+	pop r17
+	pop r16
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_INSTRUCTION_WRITE:
+	push r19
 	ldi r19, (0<<E)|(0<<RW)|(0<<RS) 
 	out PORTA, r19 
 	call LCD_WRITE
+	pop r19
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_DATA_WRITE:
+	push r19
 	ldi r19, (0<<E)|(0<<RW)|(1<<RS) 
 	out PORTA, r19 
 	call LCD_WRITE
+	pop r19
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-LCD_WRITE: //RS = 1 IS DATA, RS = 0 IS INSTRUCTION.  
-
+LCD_WRITE: //RS = 1 IS DATA, RS = 0 IS INSTRUCTION.  FINDS IF INSTR OR DATA IN r19...change?
+	push r16
+	push r19
 	ldi r16, 0xFF
 	out DDRD, r16 // PORTD NOW IN WRITE MODE
 	out PORTD, r20 // DATA/INSTRUCTION TO BE WRITTEN IS IN R20, MIGHT CHANGE TO STACK ARGUMENT?
@@ -107,20 +136,24 @@ LCD_WRITE: //RS = 1 IS DATA, RS = 0 IS INSTRUCTION.
 	ldi r16, (1<<RW)
 	out PORTA, r16 // LCD PUT INTO READMODE
 	call WAIT_IF_BUSY
+	pop r19
+	pop r16
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 WAIT_IF_BUSY:
+	push r16
 	cli //TIMING DEPENDANT I THINK
 	ldi r16, (1<<E)|(1<<RW)|(0<<RS)
-	out PORTA, r16
+	out PORTA, r16 //E PULSE STARTS
 	andi r16, 0xFE 
 	out PORTA, r16 //E PULSE STOPS
 	sbic PIND, 7
 	rjmp WAIT_IF_BUSY
-	sei
+	pop r16
+	sei //?? NOT GOOD IF USED IN INTERUPT?
 	ret
 
-LCD_READ_DDRAM:
+LCD_READ_DDRAM: //EXPERIMENTAL
 	ldi r19, (1<<E)|(1<<RW)|(0<<RS)
 	out PORTA, r16
 	//WAIT 220 ns for valid data?
