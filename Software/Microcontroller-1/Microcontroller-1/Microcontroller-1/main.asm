@@ -1,6 +1,6 @@
-	.equ E = 0
+	.equ RS = 0
 	.equ RW = 1
-	.equ RS = 2
+	.equ E = 2
 	.equ Clear_Display = 0b00000001
 
 //////////////MEMORY LAYOUT////////////////////////////////////////////////////////
@@ -44,9 +44,9 @@ INIT_CLEAR_SRAM_LOOP:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_SETUP:	
 	ldi r16, 0x00
-	out DDRD, r16 // DB0-DB7 set to READMODE as default, will change briefly when writing.
+	out DDRA, r16 // DB0-DB7 set to READMODE as default, will change briefly when writing.
 	ldi r16, 0x07 
-	out DDRA, r16 // PIN0 - E, PIN1- R/W, PIN2 - RS set to WRITEMODE, will not change.
+	out DDRB, r16 // PIN0 - RS, PIN1- R/W, PIN2 - E set to WRITEMODE, will not change.
 
 	ldi r20, 0b00111100 // 2_line_5x8_mode 
 	call LCD_INSTRUCTION_WRITE
@@ -104,7 +104,7 @@ LCD_OUTPUT_BIT:
 LCD_INSTRUCTION_WRITE:
 	push r19
 	ldi r19, (0<<E)|(0<<RW)|(0<<RS) 
-	out PORTA, r19 
+	out PORTB, r19 
 	call LCD_WRITE
 	pop r19
 	ret
@@ -112,7 +112,7 @@ LCD_INSTRUCTION_WRITE:
 LCD_DATA_WRITE:
 	push r19
 	ldi r19, (0<<E)|(0<<RW)|(1<<RS) 
-	out PORTA, r19 
+	out PORTB, r19 
 	call LCD_WRITE
 	pop r19
 	ret
@@ -121,46 +121,44 @@ LCD_WRITE: //RS = 1 IS DATA, RS = 0 IS INSTRUCTION.  FINDS IF INSTR OR DATA IN r
 	push r16
 	push r19
 	ldi r16, 0xFF
-	out DDRD, r16 // PORTD NOW IN WRITE MODE
-	out PORTD, r20 // DATA/INSTRUCTION TO BE WRITTEN IS IN R20, MIGHT CHANGE TO STACK ARGUMENT?
+	out DDRA, r16 // PORTA NOW IN WRITE MODE
+	out PORTA, r20 // DATA/INSTRUCTION TO BE WRITTEN IS IN R20, MIGHT CHANGE TO STACK ARGUMENT?
 
 	ori r19, (1<<E)
-	out PORTA, r19 //E PULSE STARTS
+	out PORTB, r19 //E PULSE STARTS
 	nop
-	andi r19, 0xFE 
-	out PORTA, r19 //E PULSE STOPS
+	andi r19, 0xFB //FILTER OUT E 
+	out PORTB, r19 //E PULSE STOPS
 
 	ldi r16, 0x00
-	out DDRD, r16 // PORTD NOW IN READ MODE
+	out DDRA, r16 // PORTA NOW IN READ MODE
 
 	ldi r16, (1<<RW)
-	out PORTA, r16 // LCD PUT INTO READMODE
+	out PORTB, r16 // LCD PUT INTO READMODE
 	call WAIT_IF_BUSY
 	pop r19
 	pop r16
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 WAIT_IF_BUSY:
-	push r16
-	cli //TIMING DEPENDANT I THINK
+	//cli //TIMING DEPENDANT I THINK
 	ldi r16, (1<<E)|(1<<RW)|(0<<RS)
-	out PORTA, r16 //E PULSE STARTS
-	andi r16, 0xFE 
-	out PORTA, r16 //E PULSE STOPS
-	sbic PIND, 7
+	out PORTB, r16 //E PULSE STARTS
+	andi r16, 0xFB //FILTER OUT E 
+	out PORTB, r16 //E PULSE STOPS
+	sbic PINA, 7
 	rjmp WAIT_IF_BUSY
-	pop r16
-	sei //?? NOT GOOD IF USED IN INTERUPT?
+	//sei //?? NOT GOOD IF USED IN INTERUPT?
 	ret
 
 LCD_READ_DDRAM: //EXPERIMENTAL
 	ldi r19, (1<<E)|(1<<RW)|(0<<RS)
-	out PORTA, r16
+	out PORTB, r16//???
 	//WAIT 220 ns for valid data?
-	in r17, PIND
+	in r17, PINA
 
-	andi r16, 0xFE
-	out PORTA, r16
+	andi r16, 0xFB
+	out PORTB, r16
 
 	in r18, PIND 
 	andi r17, 0x7F // MASK OUT DB7 
