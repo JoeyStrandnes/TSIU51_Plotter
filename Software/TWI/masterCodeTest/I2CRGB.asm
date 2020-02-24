@@ -24,7 +24,7 @@
 	.equ RGB_AUTO_INC_BIT = 0b00100000
 
 ////////// RGB-SENSOR USER CONFIG ////
-	.equ ATIME_VALUE = 0xF6 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
+	.equ ATIME_VALUE = 0x00 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
 ////////// TWI USER CONFIG ////
 	.equ TWI_BITRATE = 32  //100kHz
 	.equ TWI_PRESCALAR = 0 //100kHz
@@ -67,13 +67,20 @@ boot:
 	out SPL, r16
 	
 	call TWI_INIT
-	call RGB_INIT 
+	call RGB_INIT //Current slave is now the RGB-sensor
 	jmp MAIN
 
 ///////////////////////////////////////////////////////////////////
 
 MAIN:
-	ldi r18, 5
+
+	//ldi r16, 0xFF
+	//out DDRA, r16 //Lågdelen
+	//out DDRB, r16 //Högdelen
+
+
+	
+/*	ldi r18, 5
 DO_FIVE_READS:
 	call TWI_START_PULSE
 	call SEND_ADDRESS_WRITE
@@ -83,11 +90,14 @@ DO_FIVE_READS:
 	call TWI_START_PULSE
 	call SEND_ADDRESS_READ
 	call TWI_READ_DATA_ACK //READS RDATAL
+	out PORTA, r17
+	//call RBG_DELAY_INTEGRATION
 	call TWI_READ_DATA_NACK //READS RDATAH
+	out PORTB, r17
 	call RBG_DELAY_INTEGRATION
 	dec r18
 	brne DO_FIVE_READS
-
+*/	call READ_ALL_6_RGB_REGISTERS
 	call RGB_SHUTDOWN
 DONE:
 	rjmp DONE
@@ -131,6 +141,8 @@ RGB_INIT:
 	//
 	call TWI_STOP_PULSE
 	call RBG_DELAY_INTEGRATION //WAITS SO THE RGB-REGISTERS ARE VALID
+	call RBG_DELAY_INTEGRATION //
+	call RBG_DELAY_INTEGRATION //EXTRA SAFETY
 	pop r17
 	ret
 ///////////////////////////////////////////////////////////////////
@@ -255,7 +267,7 @@ RGB_DELAY://2.4 ms delay at 8MHz. This is the time each integration cycle of the
 	push r16
 	push r17
 	ldi  r16, 25
-	ldi  r17, 239
+	ldi  r17, 255 //239
 RGB_DELAY_LOOP:
 	dec  r17
 	brne RGB_DELAY_LOOP
@@ -283,27 +295,28 @@ RBG_DELAY_INTEGRATION_DONE:
 	ret
 ///////////////////////////////////////////////////////////////////
 
-/*READ_ALL_6_RGB_REGISTERS:
+READ_ALL_6_RGB_REGISTERS:
 	call TWI_START_PULSE
-	call SEND_ADDRESS_READ
+	call SEND_ADDRESS_WRITE
 
 	ldi r17, RGB_RDATAL
 	ori r17, RGB_COMMAND_BIT
 	ori r17, RGB_AUTO_INC_BIT
 	call TWI_SEND_DATA
 
-	call DELAY_INIT
-	ldi r18, 5
+	call TWI_START_PULSE
+	call SEND_ADDRESS_READ
+	ldi r18, 5 //Number of registers -1
 	ldi YH, HIGH(RDATAL)
 	ldi YL, LOW(RDATAL)
 READ_NEXT_RBG_REGISTER:
-	call TWI_READ_DATA
+	call TWI_READ_DATA_ACK
 	st  Y+, r17
-	call DELAY_INIT
+	call RBG_DELAY_INTEGRATION
 	dec r18
 	brne READ_NEXT_RBG_REGISTER
-	//call TWI_READ_DATA //KANSKE DENNA?
+	
 	call TWI_READ_DATA_NACK //Last READ WITH A NACK
 	st  Y, r17
 	call TWI_STOP_PULSE
-	ret*/
+	ret
