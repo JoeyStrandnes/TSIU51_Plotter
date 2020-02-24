@@ -44,19 +44,32 @@ START:
 	out		SPH, r16
 	ldi		r16, LOW(RAMEND)
 	out		SPL, r16
-	;
+
     call	HW_INIT
-	;
+
 	call	WARM
+
+
+WAIT_FOR_COLOR:
+//	in		r16, µ1	;***procesor nr1***
+	cpi		r16, 0
+	brne	FOUND_COLOR
+	rjmp	WAIT_FOR_COLOR
+FOUND_COLOR:
+	sts		(COLOR_POS), r16
 
 	ldi		r16, HIGH(SERVO_CW)
 	out		OCR1BH, r16
 	ldi		r16, LOW(SERVO_CW)
 	out		OCR1BL, r16
-	ldi		r16, 0xF0
-LOOP:
-	
-    rjmp	LOOP
+
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1AL, r16
+
+	rjmp	WAIT_FOR_COLOR
+
 ;---------------------------------------
 
 
@@ -67,6 +80,11 @@ ISR_UPPER_TRIGGER:
 	in		r16, SREG
 	push	r16
 	;
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1AL, r16
+
 
 	;pull all used
 	pop		r16
@@ -128,7 +146,6 @@ DROP:
 NO_DROP:
 
 
-
 ISR_LOWER_TRIGGER_END:
 	;pull all used
 	pop		r17
@@ -136,6 +153,9 @@ ISR_LOWER_TRIGGER_END:
 	out		SREG, r16
 	pop		r16
 	reti
+
+
+
 ;----------------------------------------
 
 
@@ -178,7 +198,7 @@ ISR_TIMER0_COMP:
 
 HW_INIT:
 	;interupt for drum trigger
-	ldi		r16, (1<<ISC00)|(1<<ISC01)|(1<<ISC11)|(1<<ISC10)
+	ldi		r16, (0<<ISC00)|(1<<ISC01)|(1<<ISC11)|(0<<ISC10)
 	out		MCUCR, r16
 	ldi		r16, (1<<INT0)|(1<<INT1)
 	out		GICR, r16
@@ -233,6 +253,11 @@ WARM:
 	out		OCR1BH, r16
 	ldi		r16, LOW(SERVO_CW)
 	out		OCR1BL, r16
+
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1AL, r16
 
 	clr		r16
 	sts		(POSL), r16
