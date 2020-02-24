@@ -6,13 +6,13 @@
 //////////////MEMORY LAYOUT////////////////////////////////////////////////////////
 	.dseg
 	.org 0x0060 //SRAM_START
-DDRAM_ADDR:
+//DDRAM_ADDR:
+//	.byte 1
+RED_N:
 	.byte 1
 GREEN_N:
 	.byte 1
 ORANGE_N:
-	.byte 1
-RED_N:
 	.byte 1
 PURPLE_N:
 	.byte 1
@@ -64,18 +64,68 @@ LCD_SETUP:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 MAIN:
-	ldi r20, 'H'
+	ldi r20, 'R'
 	call LCD_DATA_WRITE
-	
-	ldi r20, 'A'
+	ldi r20, ':'
 	call LCD_DATA_WRITE
-	
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, ' '
+	call LCD_DATA_WRITE
+
+	ldi r20, 'G'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, ' '
+	call LCD_DATA_WRITE
+
 	ldi r20, 'O'
 	call LCD_DATA_WRITE
-	
-	ldi YH, HIGH(GREEN_N)
-	ldi YL, LOW(GREEN_N)
-	call LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+
+	ldi r20, 0x40 //NEXT LINE ON DISPLAY
+	ori r20, 0b10000000 //OR IN DB7 to 1
+	call LCD_INSTRUCTION_WRITE
+
+	//ldi r20, 0x40 //NEXT LINE ON DISPLAY
+	//ori r20, 0b10000000 //OR IN DB7 to 1
+	//call LCD_INSTRUCTION_WRITE
+
+	ldi r20, 'P'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, ' '
+	call LCD_DATA_WRITE
+
+	ldi r20, 'Y'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, '0'
+	call LCD_DATA_WRITE
+	ldi r20, ' '
+	call LCD_DATA_WRITE
+
+
 DO_NOTHING:
 	jmp DO_NOTHING
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
