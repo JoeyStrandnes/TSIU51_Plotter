@@ -24,7 +24,8 @@
 	.equ RGB_AUTO_INC_BIT = 0b00100000
 
 ////////// RGB-SENSOR USER CONFIG ////
-	.equ ATIME_VALUE = 0x00 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
+	.equ ATIME_VALUE = 0xF6 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
+	.equ GAIN_VALUE  = 0x01 //00=1X, 01=4X, 10=16X, 11=60X
 ////////// TWI USER CONFIG ////
 	.equ TWI_BITRATE = 32  //100kHz
 	.equ TWI_PRESCALAR = 0 //100kHz
@@ -49,18 +50,27 @@
 //////////// MEMORY LAYOUT ////////////
 	.dseg
 	.org 0x0060 //SRAM_START
-CURRENT_SLAVE:
-	.byte 1
 
+CDATAL:	.byte 1
+CDATAH:	.byte 1
 RDATAL:	.byte 1
 RDATAH:	.byte 1
 GDATAL:	.byte 1
 GDATAH:	.byte 1
 BDATAL:	.byte 1
 BDATAH:	.byte 1
+CURRENT_SLAVE:
+	.byte 1
 	.cseg
 ////////////////////////////////////////
-boot:
+// Reset/Interupt Vectors //////////////
+.org 0
+jmp BOOT
+.org INT0ADDR
+jmp ISR_INT0
+
+.org 0x02A
+BOOT:
 	ldi r16, HIGH(RAMEND)
 	out SPH, r16
 	ldi r16, LOW(RAMEND)
@@ -68,39 +78,45 @@ boot:
 	
 	call TWI_INIT
 	call RGB_INIT //Current slave is now the RGB-sensor
+	call INT0_INIT
+	sei //TODO: Borde skriva ut färgerna och deras antal (som är 0 vid start) till skärmen innan sei
 	jmp MAIN
 
 ///////////////////////////////////////////////////////////////////
 
-MAIN:
+MAIN:	
 
-	//ldi r16, 0xFF
-	//out DDRA, r16 //Lågdelen
-	//out DDRB, r16 //Högdelen
-
-
-	
-/*	ldi r18, 5
-DO_FIVE_READS:
-	call TWI_START_PULSE
-	call SEND_ADDRESS_WRITE
-	ldi r17, RGB_RDATAL | RGB_COMMAND_BIT | RGB_AUTO_INC_BIT
-	call TWI_SEND_DATA
-	
-	call TWI_START_PULSE
-	call SEND_ADDRESS_READ
-	call TWI_READ_DATA_ACK //READS RDATAL
-	out PORTA, r17
-	//call RBG_DELAY_INTEGRATION
-	call TWI_READ_DATA_NACK //READS RDATAH
-	out PORTB, r17
-	call RBG_DELAY_INTEGRATION
-	dec r18
-	brne DO_FIVE_READS
-*/	call READ_ALL_6_RGB_REGISTERS
-	call RGB_SHUTDOWN
 DONE:
 	rjmp DONE
+///////////////////////////////////////////////////////////////////
+//I den färdiga produkten ska denna interupten triggas på att trumman är tillbaka i utgångsläge från 
+// MC-Slaven på något sätt. Då ska den göra följande:
+// 1. Vänta en hel RGB-cykel för att få rätt färgdata. Skittlen trillar ju inte ner framför sensorn förrän trumman är tillbaka
+// 2. Läsa av färg-data på Skittlen.
+// 3. Konvertera det till en av de 5 olika färgerna eller en felkod för: "ingen skittle framför sensorn" 
+// 4. Uppdatera skärmen med nya antalet Skittles - Eventuellt vänta med uppdateringen till nästa gång trumman är tillbaka.
+// Det ger uppräkning efter att Skittlen trillat ner i sin ränna. Då ska detta steget utföras först.
+// 5. Skicka vilken färg på Skittle till MC-Slaven för sortering.
+ISR_INT0:
+	push r16
+	in r16, SREG
+	push r16
+
+	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
+
+	pop r16
+	out SREG, r16
+	pop r16
+	reti
+///////////////////////////////////////////////////////////////////
+INT0_INIT:
+	push r16
+	ldi r16, (1<<ISC01) | (1<<ISC00)
+	out MCUCR, r16
+	ldi r16, (1<<INT0)
+	out GICR, r16
+	pop r16
+	ret
 ///////////////////////////////////////////////////////////////////
 
 TWI_ERROR_HANDLING: //HUR LÖSER VI DETTA? :D
@@ -128,6 +144,15 @@ RGB_INIT:
 	call TWI_SEND_DATA 
 
 	ldi r17, ATIME_VALUE //ATIME
+	call TWI_SEND_DATA
+	//
+	call TWI_START_PULSE
+	call SEND_ADDRESS_WRITE
+
+	ldi r17, RGB_CONTROL | RGB_COMMAND_BIT
+	call TWI_SEND_DATA 
+
+	ldi r17, GAIN_VALUE
 	call TWI_SEND_DATA
 	//
 	call TWI_START_PULSE
@@ -171,7 +196,7 @@ TWI_INIT: //SCL FREQ = MC CPU FREQ/(16+2*TWBR *4^TWPS)
 	out TWBR, r16
 	ldi r16, TWI_PRESCALAR 
 	out TWSR, r16
-	ldi r16, (1<<TWEN) //onödigt?
+	ldi r16, (1<<TWEN)
 	out TWCR, r16
 	pop r16
 	ret
@@ -295,28 +320,38 @@ RBG_DELAY_INTEGRATION_DONE:
 	ret
 ///////////////////////////////////////////////////////////////////
 
-READ_ALL_6_RGB_REGISTERS:
+READ_ALL_8_RGB_REGISTERS_INTO_SRAM:
+	push YH
+	push YL
+	push r16
+	push r17
+
 	call TWI_START_PULSE
 	call SEND_ADDRESS_WRITE
 
-	ldi r17, RGB_RDATAL
-	ori r17, RGB_COMMAND_BIT
-	ori r17, RGB_AUTO_INC_BIT
+	ldi r17, RGB_CDATAL |  RGB_COMMAND_BIT | RGB_AUTO_INC_BIT
 	call TWI_SEND_DATA
 
 	call TWI_START_PULSE
 	call SEND_ADDRESS_READ
-	ldi r18, 5 //Number of registers -1
-	ldi YH, HIGH(RDATAL)
-	ldi YL, LOW(RDATAL)
+	ldi r16, 7 //Number of registers -1
+	ldi YH, HIGH(CDATAL)
+	ldi YL, LOW(CDATAL)
+
 READ_NEXT_RBG_REGISTER:
 	call TWI_READ_DATA_ACK
 	st  Y+, r17
-	call RBG_DELAY_INTEGRATION
-	dec r18
+	//call RBG_DELAY_INTEGRATION onödig!!
+	dec r16
 	brne READ_NEXT_RBG_REGISTER
 	
 	call TWI_READ_DATA_NACK //Last READ WITH A NACK
 	st  Y, r17
 	call TWI_STOP_PULSE
+
+	pop r17
+	pop r16
+	pop YL
+	pop YH
 	ret
+///////////////////////////////////////////////////////////////////
