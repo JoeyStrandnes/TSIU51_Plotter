@@ -2,12 +2,11 @@
 	.equ RW = 1
 	.equ E = 2
 	.equ Clear_Display = 0b00000001
-
+	.equ Return_Home   = 0b00000010
+	.equ Second_Line_Address = 0b11000000
 //////////////MEMORY LAYOUT////////////////////////////////////////////////////////
 	.dseg
 	.org 0x0060 //SRAM_START
-//DDRAM_ADDR:
-//	.byte 1
 RED_N:
 	.byte 1
 GREEN_N:
@@ -33,7 +32,7 @@ YELLOW_N:
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 INIT_CLEAR_SRAM:
 	ldi r17, 6 //NUMBER OF BYTES TO CLEAR
-	ldi r16, 0xC0 //SHOULD BE 0 but for debug purpse atm
+	ldi r16, 99 //SHOULD BE 0 but for debug purpse atm
 	ldi YH,HIGH(SRAM_START)
 	ldi YL,LOW(SRAM_START)
 INIT_CLEAR_SRAM_LOOP:
@@ -62,16 +61,19 @@ LCD_SETUP:
 	// INIT DONE
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+UPDATE_DISPLAY:
+	push r20
+	push YH
+	push YL
 
-MAIN:
 	ldi r20, 'R'
 	call LCD_DATA_WRITE
 	ldi r20, ':'
 	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
+	ldi YH, HIGH(RED_N)
+	ldi YL, LOW(RED_N)
+	call OUTPUT_DISPLAY_BYTE_TO_BCD
+
 	ldi r20, ' '
 	call LCD_DATA_WRITE
 
@@ -79,38 +81,33 @@ MAIN:
 	call LCD_DATA_WRITE
 	ldi r20, ':'
 	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
-	ldi r20, ' '
-	call LCD_DATA_WRITE
+	ldi YH, HIGH(GREEN_N)
+	ldi YL, LOW(GREEN_N)
+	call OUTPUT_DISPLAY_BYTE_TO_BCD
+
+	ldi r20, Second_Line_Address
+	call LCD_INSTRUCTION_WRITE
 
 	ldi r20, 'O'
 	call LCD_DATA_WRITE
 	ldi r20, ':'
 	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
+	ldi YH, HIGH(ORANGE_N)
+	ldi YL, LOW(ORANGE_N)
+	call OUTPUT_DISPLAY_BYTE_TO_BCD
 
-	ldi r20, 0x40 //NEXT LINE ON DISPLAY
-	ori r20, 0b10000000 //OR IN DB7 to 1
-	call LCD_INSTRUCTION_WRITE
-
-	//ldi r20, 0x40 //NEXT LINE ON DISPLAY
-	//ori r20, 0b10000000 //OR IN DB7 to 1
-	//call LCD_INSTRUCTION_WRITE
+	ldi r20, ' '
+	call LCD_DATA_WRITE
 
 	ldi r20, 'P'
 	call LCD_DATA_WRITE
 	ldi r20, ':'
 	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
+	ldi YH, HIGH(PURPLE_N)
+	ldi YL, LOW(PURPLE_N)
+	call OUTPUT_DISPLAY_BYTE_TO_BCD
+
+	
 	ldi r20, ' '
 	call LCD_DATA_WRITE
 
@@ -118,38 +115,52 @@ MAIN:
 	call LCD_DATA_WRITE
 	ldi r20, ':'
 	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
-	ldi r20, '0'
-	call LCD_DATA_WRITE
-	ldi r20, ' '
-	call LCD_DATA_WRITE
+	ldi YH, HIGH(YELLOW_N)
+	ldi YL, LOW(YELLOW_N)
+	call OUTPUT_DISPLAY_BYTE_TO_BCD
 
-
-DO_NOTHING:
-	jmp DO_NOTHING
+	ldi r20, Return_Home //SETS CURSOR BACK AT START OF LINE 1
+	call LCD_INSTRUCTION_WRITE
+	
+	pop YL
+	pop YH
+	pop r20
+	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-//TODO: MAKE IT TAKE REGISTER AND MAKE ANOTHER FUNCTION FOR Y-POINTER?
-LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN: //LOADS FROM SRAM WITH Y-POINTER AS ARGUMENT, DDRAM ADRESS SHOULD BE SET BEFORE WITH AUTO INC-MODE! 
+OUTPUT_DISPLAY_BYTE_TO_BCD:
 	push r16
 	push r17
-	ldi r16, 8
-	ld r17, Y
-LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN_LOOP:	
-	lsl r17
-	brcc LCD_OUTPUT_BIT_AS_ZERO
-	ldi r20, '1'
-	rjmp LCD_OUTPUT_BIT
-LCD_OUTPUT_BIT_AS_ZERO:
-	ldi r20, '0'
-LCD_OUTPUT_BIT:
-	call LCD_DATA_WRITE
-	dec r16
-	brne LCD_OUTPUT_BYTE_IN_BINARY_TO_SCREEN_LOOP
+	push r20
+	clr r17 
+	ld r16, Y
+LOOP_AGAIN:
+	subi r16, 10 //LESS THAN 10?
+	brmi DIGITS_DONE
+	inc r17
+	jmp LOOP_AGAIN
+	
+DIGITS_DONE:
+	subi r16, -10 //RESTORE ONE'S POSITION
 
+	mov r20, r17 //MOVE TEN'S POSITION INTO LCD-REGISTER
+	subi r20, -48 //ADD ASCII OFFSET
+	call LCD_DATA_WRITE //WRITE TEN'S POSITION
+
+	mov r20, r16 //MOVE ONE'S POSITION INTO LCD-REGISTER
+	subi r20, -48 //ADD ASCII OFFSET
+	call LCD_DATA_WRITE //WRITE ONE'S POSITION 
+
+	pop r20
 	pop r17
 	pop r16
 	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+MAIN:
+	call UPDATE_DISPLAY
+DO_NOTHING:
+	jmp DO_NOTHING
+
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_INSTRUCTION_WRITE:
 	push r19
@@ -191,65 +202,12 @@ LCD_WRITE: //RS = 1 IS DATA, RS = 0 IS INSTRUCTION.  FINDS IF INSTR OR DATA IN r
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 WAIT_IF_BUSY:
-	//cli //TIMING DEPENDANT I THINK
 	ldi r16, (1<<E)|(1<<RW)|(0<<RS)
 	out PORTB, r16 //E PULSE STARTS
 	andi r16, 0xFB //FILTER OUT E 
 	out PORTB, r16 //E PULSE STOPS
 	sbic PINA, 7
 	rjmp WAIT_IF_BUSY
-	//sei //?? NOT GOOD IF USED IN INTERUPT?
-	ret
-
-LCD_READ_DDRAM: //EXPERIMENTAL
-	ldi r19, (1<<E)|(1<<RW)|(0<<RS)
-	out PORTB, r16//???
-	//WAIT 220 ns for valid data?
-	in r17, PINA
-
-	andi r16, 0xFB
-	out PORTB, r16
-
-	in r18, PIND 
-	andi r17, 0x7F // MASK OUT DB7 
-	andi r18, 0x7F // MASK OUT DB7
-	cp r17, r18 // NOT SURE IF DDRAM ADDR IS CHANGED?
-	breq TEST_EQUAL
-TEST_LOOP:
-	rjmp TEST_LOOP
-TEST_EQUAL:
-	sts DDRAM_ADDR, r17
-	ret
-/*LCD_INSTRUCTION_READ:
-	ldi r19, (0<<E)|(1<<RW)|(0<<RS)
-	ret
-LCD_DATA_READ:
-	ldi r19, (0<<E)|(1<<RW)|(1<<RS)
-	ret
-
-	//in r17, PIND
-	//andi r17, 0b01111111
-	//sts DDRAM_ADDR, r17
-LCD_READ:
-	ori r19,(1<<E)
-	out PORTA, r19 //E PULSE STARTS
-	nop
-	nop
-	andi r19, 0xFE 
-	out PORTA, r19 //E PULSE STOPS
-	in r20, PIND //BEFORE E STOP
-	ret*/
-
-
-
-
-DELAY01:
-	ldi r16, 0xFF
-	ldi r17, 0xFF
-DELAY01_LOOP:
-	dec r16
-	brne DELAY01_LOOP
-	dec r17
-	brne DELAY01_LOOP
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
