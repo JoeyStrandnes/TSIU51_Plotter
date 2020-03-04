@@ -1,0 +1,402 @@
+;motor processor
+
+
+
+
+
+
+	.cseg
+	.org	0
+	jmp		START
+	.org	INT0addr
+	jmp		ISR_UPPER_TRIGGER
+	.org	INT1addr
+	jmp		ISR_LOWER_TRIGGER
+	.org 0x1C
+	jmp ADC_ISR
+	.org	OVF1addr
+	jmp		ISR_SERVO_DIRECTION
+	.org	TWIaddr
+	jmp		ISR_TWI
+	.org	0x26	//Timer0 comp
+	jmp		ISR_TIMER0_COMP
+
+
+
+
+	.dseg
+	.org	SRAM_START
+POSU:
+	.byte	1	;Upper slab possission
+POSL:
+	.byte	1	;Lower slab possission
+COLOR_POS:
+	.byte	1	;current color possission
+	.cseg
+
+
+	.def	COLOR_REG	= r24
+	.def	TOGGLE_REG	= r25
+	.def	TIMER0_REG  = r23
+
+	.equ	SERVO_RR	= 2600		;Refresh rate
+	.equ	SERVO_CW	= 10		;Clockwise
+	.equ	SERVO_CCW	= 255		;Counter clockwise
+	.equ	SERVO_ST	= 193		;Stop
+	.equ	NO_SKITTLE	= 10
+
+	;---code
+START:
+	ldi		r16, HIGH(RAMEND)
+	out		SPH, r16
+	ldi		r16, LOW(RAMEND)
+	out		SPL, r16
+
+    call	HW_INIT
+
+	call	WARM
+
+
+WAIT_FOR_COLOR:
+
+	cpi		COLOR_REG, NO_SKITTLE
+	brne	FOUND_COLOR
+	rjmp	WAIT_FOR_COLOR
+FOUND_COLOR:
+
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1AL, r16
+
+	ldi		COLOR_REG, NO_SKITTLE
+
+	rjmp	WAIT_FOR_COLOR
+
+;---------------------------------------
+
+
+;***Eatch time the the drum passes a color dump***
+ISR_UPPER_TRIGGER:
+	;push all used
+	push	r16
+	in		r16, SREG
+	push	r16
+	;
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1BL, r16
+
+
+	;pull all used
+	pop		r16
+	out		SREG, r16
+	pop		r16
+	reti
+;----------------------------------------
+
+
+
+
+;***Eatch time the the drum passes a color dump***
+ISR_LOWER_TRIGGER:
+	;push all used
+	push	r16
+	in		r16, SREG
+	push	r16
+	push	r17
+	;
+	
+	sbrs	TOGGLE_REG, 0
+	rjmp	FIRST_SPIN
+INIT_WARM:
+	clr		r16
+	out		TCNT0, r16
+	clr		TIMER0_REG
+	rjmp	ISR_LOWER_TRIGGER_END
+
+FIRST_SPIN:
+	sbrs	TOGGLE_REG, 1
+	rjmp	NORMAL_PROCEDURE
+
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1AL, r16
+
+	cbr		TOGGLE_REG, 2
+	rjmp	ISR_LOWER_TRIGGER_END
+
+	;
+NORMAL_PROCEDURE:
+	in		r16, OCR1AL		;servo direction
+	cpi		r16, SERVO_ST
+	breq	ISR_LOWER_TRIGGER_END
+	cpi		r16, SERVO_CCW		
+	breq	CCW_DIR
+CW_DIR:
+	lds		r16, (POSL)
+	inc		r16
+	rjmp	DIR_LIM
+CCW_DIR:
+	lds		r16, (POSL)
+	dec		r16
+	;
+DIR_LIM:
+	ori		r16, 0	;check negative
+	brmi	UND_LIM	;under limit
+	cpi		r16, 5	;over limit
+	brne	POS_OK
+	ldi		r16, 3	;***utanf?r sensor***
+UND_LIM:
+	inc		r16		;***utanf?r sensor***
+	;
+POS_OK:
+	sts		(POSL), r16	;new pos
+	lds		r17, (COLOR_POS)
+	cp		r16, r17
+	brne	NO_DROP
+DROP:
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1AL, r16
+	//WHEN THE LOWER DISK HAS ROTATED TO ITS TARGET, THE UPPER ROTATES AND DROPS OFF SKITTLE
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1BL, r16
+NO_DROP:
+
+
+ISR_LOWER_TRIGGER_END:
+	;pull all used
+	pop		r17
+	pop		r16
+	out		SREG, r16
+	pop		r16
+	reti
+
+
+
+;----------------------------------------
+
+
+ISR_SERVO_DIRECTION:
+	;push all used
+	push	r16
+	in		r16, SREG
+	push	r16
+	;		
+
+	;pull all used
+	pop		r16
+	out		SREG, r16
+	pop		r16
+	reti
+;----------------------------------------
+
+
+
+ISR_TIMER0_COMP:
+	;push all used
+	push	r16
+	in		r16, SREG
+	push	r16
+	;remove t flag
+
+	inc		TIMER0_REG
+	cpi		TIMER0_REG, 1		//Time between holes
+	brne	WRONG_POSITION
+	;disable timer0
+	clr		r16
+	out		TCCR0, r16
+	cbr		TOGGLE_REG, 1
+
+WRONG_POSITION:
+	
+	;pull all used
+	pop		r16
+	out		SREG, r16
+	pop		r16
+	reti
+;----------------------------------------
+
+
+TWI_SLAVE_INIT:
+	ldi r16, 0b11010010 //0x69 but shifted
+	out TWAR, r16	
+	ldi r16, (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE)
+	out TWCR, r16
+	ldi		COLOR_REG, NO_SKITTLE
+	ret
+
+
+ISR_TWI:
+	push	r16
+	in		r16, SREG
+	push	r16
+
+	ldi		COLOR_REG, NO_SKITTLE
+
+	in		r16, TWSR
+	cpi		r16, 0x80
+	brne	NO_DATA
+	in		r17, TWDR
+NO_DATA:
+	ldi		r16, (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE)
+	out		TWCR, r16
+
+	
+	pop		r16
+	out		SREG, r16
+	pop		r16
+	reti
+;-----------------------------------------
+
+ADC_ISR:
+	push	r16
+	in		r16, SREG
+	push	r16
+	push	r17
+
+	in		r16, ADCL
+	in		r17, ADCH
+
+	cpi		r16, 0x0F
+	brlo	NO_OVER_CURRENT
+	 
+	ldi		r16, (1<<PB0)
+	out		PORTB, r16
+	jmp		ADC_DONE
+
+NO_OVER_CURRENT:
+	ldi		r16, (0<<PB0)
+	out		PORTB, r16
+
+ADC_DONE:
+	pop		r17
+	pop		r16
+	out		SREG, r16
+	pop		r16
+	reti
+;-----------------------------------------
+
+
+HW_INIT:
+
+	call	FIRST_INIT
+	call	TIMER1_INIT
+	call	TIMER0_INIT
+//	call	ADC_INIT
+	call	TWI_SLAVE_INIT
+
+	ret
+
+
+FIRST_INIT:
+	;interupt for drum trigger
+	ldi		r16, (0<<ISC00)|(1<<ISC01)|(1<<ISC11)|(0<<ISC10)
+	out		MCUCR, r16
+	ldi		r16, (1<<INT0)|(1<<INT1)
+	out		GICR, r16
+
+	ldi		r16, 0xF0	
+	out		DDRD, r16	;D 4-7 output
+
+	ldi		r16, 0x00
+	out		DDRB, r16	;B input 
+
+	ret
+
+TIMER1_INIT:
+	; Setting counter mode 
+	ldi		r16, (1<<WGM13)|(1<<WGM12)
+	out		TCCR1B, r16
+
+	ldi		r16, (1<<WGM11)|(0<<WGM10)|(1<<COM1A1)|(0<<COM1A0)|(1<<COM1B1)|(0<<COM1B0)
+	out		TCCR1A, r16
+
+	; Setting max counter value before overflow
+	ldi		r16, HIGH(SERVO_RR)
+	out		ICR1H, r16
+	ldi		r16, LOW(SERVO_RR)
+	out		ICR1L, r16
+
+	; Setting prescaling and interrupt
+	in		r16, TCCR1B  
+	ori		r16,(0<<CS12)|(1<<CS11)|(1<<CS10) //Prescaler set to F_CPU/64 (S:108)
+
+	out		TCCR1B, r16
+	ldi		r16, 1<<TOIE1
+	out		TIMSK, r16
+
+	ret
+
+
+	
+TIMER0_INIT:	;8bit timer
+	ldi		r16, (1<<CS02)|(0<<CS01)|(1<<CS00)|(0<<WGM00)|(1<<WGM01) // Prescaler /1024, CTC mode
+	out		TCCR0, r16	
+	
+	in		r16, TIMSK
+	ori		r16, (1<<OCIE0)
+	out		TIMSK, r16
+	ldi		r16, 0xFF	//time before CTC
+	out		OCR0, r16
+
+	ret
+
+ADC_INIT: 
+/*
+***ADC SETTINGS***
+AREF
+Left adjusted
+ADC0
+
+ADC always enabled
+Auto Trigger enabled
+Interrupt enabled
+Prescaler: 32 ((8MHz/32)= ADC_FREQ = 250KHz)
+Free Running mode (SIFOR defaults to Free Running)
+*/
+	ldi		r16, (0<<REFS1)|(0<<REFS0)|(0<<ADLAR)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0)
+	out		ADMUX, r16
+
+	ldi		r16, (1<<ADEN)|(1<<ADSC)|(1<<ADATE)|(1<<ADIE)|(1<<ADPS2)|(0<<ADPS1)|(1<<ADPS0) 
+	out		ADCSRA, r16
+
+	ret
+;--------------------------------------------
+
+//A = LLOWER DISK
+//B = UPPER DISK
+
+WARM:
+	ldi		r16, HIGH(SERVO_CCW)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_CCW)
+	out		OCR1BL, r16
+
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1AL, r16
+
+	clr		TIMER0_REG
+	clr		r16
+	clr		r17
+	clr		r23
+	clr		r24
+	clr		r25
+	sts		(POSU), r16
+	sts		(COLOR_POS), r16
+	ldi		r16, 0xFF
+	sts		(POSL), r16
+			
+
+	sbr		TOGGLE_REG, (1<<0)
+	sbr		TOGGLE_REG, (1<<1)
+	sei
+	ret
