@@ -12,10 +12,8 @@
 	jmp		ISR_UPPER_TRIGGER
 	.org	INT1addr
 	jmp		ISR_LOWER_TRIGGER
-	.org 0x1C
-	jmp ADC_ISR
-	.org	OVF1addr
-	jmp		ISR_SERVO_DIRECTION
+	.org	0x1C
+	jmp		ADC_ISR
 	.org	TWIaddr
 	jmp		ISR_TWI
 	.org	0x26	//Timer0 comp
@@ -35,9 +33,8 @@ COLOR_POS:
 	.cseg
 
 
-	.def	COLOR_REG	= r24
-	.def	TOGGLE_REG	= r25
 	.def	TIMER0_REG  = r23
+	.def	TOGGLE_REG	= r25
 
 	.equ	SERVO_RR	= 2600		;Refresh rate
 	.equ	SERVO_CW	= 10		;Clockwise
@@ -58,8 +55,8 @@ START:
 
 
 WAIT_FOR_COLOR:
-
-	cpi		COLOR_REG, NO_SKITTLE
+	lds		r16, (COLOR_POS)
+	cpi		r16, NO_SKITTLE
 	brne	FOUND_COLOR
 	rjmp	WAIT_FOR_COLOR
 FOUND_COLOR:
@@ -69,7 +66,8 @@ FOUND_COLOR:
 	ldi		r16, LOW(SERVO_CW)
 	out		OCR1AL, r16
 
-	ldi		COLOR_REG, NO_SKITTLE
+	ldi		r16, NO_SKITTLE
+	sts		(COLOR_POS), r16
 
 	rjmp	WAIT_FOR_COLOR
 
@@ -83,10 +81,19 @@ ISR_UPPER_TRIGGER:
 	in		r16, SREG
 	push	r16
 	;
+
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1BL, r16
+
+	call	DELAY
+
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1BH, r16
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1BL, r16
+
 
 
 	;pull all used
@@ -107,10 +114,10 @@ ISR_LOWER_TRIGGER:
 	push	r16
 	push	r17
 	;
-	
+WARM_DRUM:
 	sbrs	TOGGLE_REG, 0
 	rjmp	FIRST_SPIN
-INIT_WARM:
+
 	clr		r16
 	out		TCNT0, r16
 	clr		TIMER0_REG
@@ -120,6 +127,8 @@ FIRST_SPIN:
 	sbrs	TOGGLE_REG, 1
 	rjmp	NORMAL_PROCEDURE
 
+	//call	DELAY	
+
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1AH, r16
 	ldi		r16, LOW(SERVO_ST)
@@ -127,48 +136,39 @@ FIRST_SPIN:
 
 	cbr		TOGGLE_REG, 2
 	rjmp	ISR_LOWER_TRIGGER_END
+	
 
-	;
 NORMAL_PROCEDURE:
-	in		r16, OCR1AL		;servo direction
-	cpi		r16, SERVO_ST
+	;check for false interupt
+	in		r16, OCR1AL		//servo direction
+	cpi		r16, LOW(SERVO_ST)
 	breq	ISR_LOWER_TRIGGER_END
-	cpi		r16, SERVO_CCW		
-	breq	CCW_DIR
-CW_DIR:
+
 	lds		r16, (POSL)
-	inc		r16
-	rjmp	DIR_LIM
-CCW_DIR:
-	lds		r16, (POSL)
-	dec		r16
-	;
-DIR_LIM:
-	ori		r16, 0	;check negative
-	brmi	UND_LIM	;under limit
-	cpi		r16, 5	;over limit
+	inc		r16	
+POS_LIM:
+	cpi		r16, 5	//over limit
 	brne	POS_OK
-	ldi		r16, 3	;***utanf?r sensor***
-UND_LIM:
-	inc		r16		;***utanf?r sensor***
-	;
+	clr		r16		
 POS_OK:
-	sts		(POSL), r16	;new pos
+	sts		(POSL), r16	//new pos
 	lds		r17, (COLOR_POS)
 	cp		r16, r17
 	brne	NO_DROP
+	
 DROP:
+	//call	DELAY	
+
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1AH, r16
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1AL, r16
-	//WHEN THE LOWER DISK HAS ROTATED TO ITS TARGET, THE UPPER ROTATES AND DROPS OFF SKITTLE
-	ldi		r16, HIGH(SERVO_CW)
+	;WHEN THE LOWER DISK HAS ROTATED TO ITS TARGET, THE UPPER ROTATES AND DROPS OFF SKITTLE
+	ldi		r16, HIGH(SERVO_CCW)
 	out		OCR1BH, r16
-	ldi		r16, LOW(SERVO_CW)
+	ldi		r16, LOW(SERVO_CCW)
 	out		OCR1BL, r16
 NO_DROP:
-
 
 ISR_LOWER_TRIGGER_END:
 	;pull all used
@@ -180,22 +180,20 @@ ISR_LOWER_TRIGGER_END:
 
 
 
+DELAY:
+    ldi  r18, 5
+    ldi  r19, 15
+    ldi  r20, 242
+L1: dec  r20
+    brne L1
+    dec  r19
+    brne L1
+    dec  r18
+    brne L1
+
+	ret
 ;----------------------------------------
 
-
-ISR_SERVO_DIRECTION:
-	;push all used
-	push	r16
-	in		r16, SREG
-	push	r16
-	;		
-
-	;pull all used
-	pop		r16
-	out		SREG, r16
-	pop		r16
-	reti
-;----------------------------------------
 
 
 
@@ -204,13 +202,12 @@ ISR_TIMER0_COMP:
 	push	r16
 	in		r16, SREG
 	push	r16
-	;remove t flag
 
 	inc		TIMER0_REG
-	cpi		TIMER0_REG, 1		//Time between holes
+	cpi		TIMER0_REG, 30		//Time between holes
 	brne	WRONG_POSITION
-	;disable timer0
-	clr		r16
+	
+	ldi		r16, (0<<CS02)|(0<<CS01)|(0<<CS00) //disable timer0
 	out		TCCR0, r16
 	cbr		TOGGLE_REG, 1
 
@@ -224,13 +221,6 @@ WRONG_POSITION:
 ;----------------------------------------
 
 
-TWI_SLAVE_INIT:
-	ldi r16, 0b11010010 //0x69 but shifted
-	out TWAR, r16	
-	ldi r16, (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE)
-	out TWCR, r16
-	ldi		COLOR_REG, NO_SKITTLE
-	ret
 
 
 ISR_TWI:
@@ -238,7 +228,8 @@ ISR_TWI:
 	in		r16, SREG
 	push	r16
 
-	ldi		COLOR_REG, NO_SKITTLE
+	ldi		r16, NO_SKITTLE
+	sts		(COLOR_POS), r16
 
 	in		r16, TWSR
 	cpi		r16, 0x80
@@ -254,6 +245,7 @@ NO_DATA:
 	pop		r16
 	reti
 ;-----------------------------------------
+
 
 ADC_ISR:
 	push	r16
@@ -290,7 +282,7 @@ HW_INIT:
 	call	TIMER1_INIT
 	call	TIMER0_INIT
 //	call	ADC_INIT
-	call	TWI_SLAVE_INIT
+//	call	TWI_SLAVE_INIT
 
 	ret
 
@@ -343,7 +335,7 @@ TIMER0_INIT:	;8bit timer
 	in		r16, TIMSK
 	ori		r16, (1<<OCIE0)
 	out		TIMSK, r16
-	ldi		r16, 0xFF	//time before CTC
+	ldi		r16, 100	//time before CTC
 	out		OCR0, r16
 
 	ret
@@ -368,12 +360,31 @@ Free Running mode (SIFOR defaults to Free Running)
 	out		ADCSRA, r16
 
 	ret
+
+TWI_SLAVE_INIT:
+	ldi		r16, 0b11010010 //0x69 but shifted
+	out		TWAR, r16	
+	ldi		r16, (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE)
+	out		TWCR, r16
+	ret
 ;--------------------------------------------
 
 //A = LLOWER DISK
 //B = UPPER DISK
 
 WARM:
+	clr		TIMER0_REG
+	clr		r16
+	clr		r17
+	clr		r23
+	clr		r24
+	clr		r25
+	sts		(POSU), r16
+	ldi		r16, NO_SKITTLE
+	sts		(COLOR_POS), r16
+	ldi		r16, 0xFF
+	sts		(POSL), r16
+
 	ldi		r16, HIGH(SERVO_CCW)
 	out		OCR1BH, r16
 	ldi		r16, LOW(SERVO_CCW)
@@ -384,19 +395,8 @@ WARM:
 	ldi		r16, LOW(SERVO_CW)
 	out		OCR1AL, r16
 
-	clr		TIMER0_REG
-	clr		r16
-	clr		r17
-	clr		r23
-	clr		r24
-	clr		r25
-	sts		(POSU), r16
-	sts		(COLOR_POS), r16
-	ldi		r16, 0xFF
-	sts		(POSL), r16
-			
-
 	sbr		TOGGLE_REG, (1<<0)
 	sbr		TOGGLE_REG, (1<<1)
+
 	sei
 	ret
