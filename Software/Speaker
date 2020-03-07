@@ -16,72 +16,179 @@
 	out		DDRB, r16
 	rjmp	START
 
+	.equ	Ab0 = 255
+	.equ	A0	= 246
+	.equ	Bb0	= 230
+	.equ	B0	= 219
+	.equ	C1	= 208
+	.equ	Db1 = 196
+	.equ	D1	= 185
+	.equ	Eb1 = 174
+	.equ	E1	= 163
+	.equ	F1	= 154
+	.equ	Gb1 = 145
+	.equ	G1  = 138
+	.equ	Ab1 = 130
+	.equ	A1	= 123
+	.equ	Bb1 = 116
+	.equ	B1	= 109
+	.equ	C2	= 103
+	.equ	Db2 = 96
+	.equ	D2  = 91
+	.equ	Eb2	= 85
+	.equ	E2	= 80
+	.equ	F2	= 76
+	.equ	Gb2 = 72
+	.equ	G2	= 68
+	.equ	Ab2 = 63
+	.equ	A2	= 60
+	.equ	Bb2	= 57
+	.equ	B2  = 54
+	.equ	C3	= 50
+	.equ	Db3	= 47
+	.equ	D3	= 45
+	.equ	Eb3	= 42
+	.equ	E3	= 40
+
+	
+	.equ	L_Ab0	= 61
+	.equ	L_A0	= 65
+	.equ	L_Bb0	= 69
+	.equ	L_B0	= 73
+	.equ	L_C1	= 76
+	.equ	L_Db1	= 81
+	.equ	L_D1	= 85
+	.equ	L_Eb1	= 92
+	.equ	L_E1	= 98
+	.equ	L_F1	= 102
+	.equ	L_Gb1	= 110
+	.equ	L_G1	= 114
+	.equ	L_Ab1	= 122
+	.equ	L_A1	= 130
+	.equ	L_Bb1	= 137
+	.equ	L_B1	= 146
+	.equ	L_C2	= 153
+	.equ	L_Db2	= 163
+	.equ	L_D2	= 171
+	.equ	L_Eb2	= 183
+	.equ	L_E2	= 195
+	.equ	L_F2	= 203
+	.equ	L_Gb2	= 220
+	.equ	L_G2	= 229
+	.equ	L_Ab2	= 255
+	.equ	L_A2	= 255
+	.equ	L_Bb2	= 255
+	.equ	L_B2	= 255
+	.equ	L_C3	= 255
+	.equ	L_Db3	= 255
+	.equ	L_D3	= 255
+	.equ	L_Eb3	= 255
+	.equ	L_E3	= 255
+	
+		
+
+
+
+
 ;SCALE:
 	;.db		0xFC, 0xE0, 0xCA, 0xBA, 0xA3, 0x90, 0x7E, 0x7A
-NOTES1:
-	.db		0xFC, 0xE0, 0xCA, 0xBA, 0xA3, 0x90, 0x7E, 0x7A
+;Zelda
+;	.db		L_G1, L_A1, L_B1, L_Db2, L_G1, L_A1, L_B1, L_Db2, L_Ab1, L_Bb1, L_C2, L_D2, L_Ab1, L_Bb1, L_C2, L_D2, L_A1, L_B1, L_Db2, L_Eb2, L_A1, L_B1, L_Db2, L_Eb2, L_Bb1, L_C2, L_D2, L_E2, L_Bb1, L_C2, L_D2, L_E2, L_B1, L_Db2, L_Eb2, L_F2, L_C2, L_D2, L_E2, L_Gb2, L_Db2, L_Eb2, L_F2, L_G2, L_D2, L_E2, L_Gb2, L_Ab2, L_A1, L_A1, L_Bb1, L_Bb1, L_B1, L_B1, L_C2, L_C2, L_C2, L_C2, L_C2, L_C2
+
+;	.db		 G1, A1, B1, Db2, G1, A1, B1, Db2, Ab1, Bb1, C2, D2, Ab1, Bb1, C2, D2, A1, B1, Db2, Eb2, A1, B1, Db2, Eb2, Bb1, C2, D2, E2, Bb1, C2, D2, E2, B1, Db2, Eb2, F2, C2, D2, E2, Gb2, Db2, Eb2, F2, G2, D2, E2, Gb2, Ab2, 0, 0, 0, 0, A1, Bb1, B1, C2, C2, C2, C2
 
 NOTE_LENGTH:
-	.db		0xFF
+	.db		L_A1, L_Bb1, L_B1, L_C2, L_C2, L_C2, L_C2
+NOTES1:
+	.db		A1, Bb1, B1, C2, C2, C2, C2
 
 
+	.equ	DELAYLENGTH = 1
 
+	.def	NOTE_LENGTH_REG = r25
+	
+	
 
 START:
 	ldi		r21, (START-NOTES1)*2
+
+	ldi		ZH, HIGH(NOTE_LENGTH*2)
+	ldi		ZL, LOW(NOTE_LENGTH*2)
+	push	ZH
+	push	ZL
+
 	ldi		ZH, HIGH(NOTES1*2)
 	ldi		ZL, LOW(NOTES1*2)
 
-	ldi		YH, HIGH(NOTE_LENGTH)
-	ldi		YL, LOW(NOTE_LENGTH)
+
 
 	call	SONG1
-	rjmp	START
+INF:
+	rjmp	INF
 
 SONG1:
 	lpm		r16, Z
 	cpi		r16, 0
 	breq	DELAY
-	lpm		r17, Y
+
+	mov		r16, ZH
+	mov		r17, ZL
+	pop		r18
+	pop		r19
+	pop		ZL
+	pop		ZH
+	lpm		NOTE_LENGTH_REG, Z
+	adiw	Z, 1
+	push	ZH
+	push	ZL
+	push	r19
+	push	r18
+	mov		ZH, r16
+	mov		ZL, r17
+
 	call	WAVE
 SONGCONTINUE:
 	adiw	Z, 1
-	adiw	Y, 1
 	dec		r21
 	brne	SONG1
 	ret
 
 
 WAVE:
-	ldi		r16, 0xFF
+	ldi		r16, 1
 	out		PORTB, r16
 	call	WAVEDELAY
 	clr		r16
 	out		PORTB, r16
 	call	WAVEDELAY
-	dec		r17
-	cpi		r17, 0
+
+	dec		NOTE_LENGTH_REG
+	cpi		NOTE_LENGTH_REG, 0
 	breq	WAVE_DONE	
 	rjmp	WAVE
 WAVE_DONE:
-	ldi		r17, 0xFF
 	ret
 	
 WAVEDELAY:
-	lpm		r18, Z
-WINNER:
-	dec		r18
-	brne	WINNER
+    ldi  r16, 25
+L0: lpm  r17, Z
+L1: dec  r17
+    brne L1
+    dec  r16
+    brne L0
 	ret
 
 
 DELAY:
 
-	ldi		r19, 0xFF
-OUTER:
-	dec		r19
-	brne	OUTER
-INNER:
-	dec		r20
-	brne	DELAY
+    ldi  r18, DELAYLENGTH
+    ldi  r19, 75
+    ldi  r20, 191
+DL1: dec  r20
+    brne DL1
+    dec  r19
+    brne DL1
+    dec  r18
+    brne DL1
+    nop
 	rjmp	SONGCONTINUE
