@@ -1,7 +1,5 @@
-;motor processor
 
-
-
+ ;motor processor
 
 
 
@@ -12,14 +10,10 @@
 	jmp		ISR_UPPER_TRIGGER
 	.org	INT1addr
 	jmp		ISR_LOWER_TRIGGER
-	.org	0x1C
-	jmp		ADC_ISR
 	.org	TWIaddr
 	jmp		ISR_TWI
 	.org	0x26	//Timer0 comp
 	jmp		ISR_TIMER0_COMP
-
-
 
 
 	.dseg
@@ -39,7 +33,7 @@ COLOR_POS:
 	.equ	SERVO_RR	= 2600		;Refresh rate
 	.equ	SERVO_CW	= 10		;Clockwise
 	.equ	SERVO_CCW	= 255		;Counter clockwise
-	.equ	SERVO_ST	= 193		;Stop
+	.equ	SERVO_ST	= 192		;Stop
 	.equ	NO_SKITTLE	= 10
 
 	;---code
@@ -55,19 +49,19 @@ START:
 
 
 WAIT_FOR_COLOR:
+	sei
 	lds		r16, (COLOR_POS)
 	cpi		r16, NO_SKITTLE
+	cli
 	brne	FOUND_COLOR
 	rjmp	WAIT_FOR_COLOR
 FOUND_COLOR:
-
+	
 	ldi		r16, HIGH(SERVO_CW)
 	out		OCR1AH, r16
 	ldi		r16, LOW(SERVO_CW)
 	out		OCR1AL, r16
 
-	ldi		r16, NO_SKITTLE
-	sts		(COLOR_POS), r16
 
 	rjmp	WAIT_FOR_COLOR
 
@@ -88,7 +82,7 @@ ISR_UPPER_TRIGGER:
 	out		OCR1BL, r16
 
 	call	DELAY
-
+	
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1BH, r16
 	ldi		r16, LOW(SERVO_ST)
@@ -145,7 +139,7 @@ NORMAL_PROCEDURE:
 	breq	ISR_LOWER_TRIGGER_END
 
 	lds		r16, (POSL)
-	inc		r16	
+	inc		r16	 
 POS_LIM:
 	cpi		r16, 5	//over limit
 	brne	POS_OK
@@ -158,6 +152,9 @@ POS_OK:
 	
 DROP:
 	//call	DELAY	
+
+	ldi		r16, NO_SKITTLE
+	sts		(COLOR_POS), r16
 
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1AH, r16
@@ -181,15 +178,20 @@ ISR_LOWER_TRIGGER_END:
 
 
 DELAY:
-    ldi  r18, 5
-    ldi  r19, 15
-    ldi  r20, 242
+; Delay 320 000 cycles
+; 40ms at 8.0 MHz
+
+    ldi  r18, 2
+    ldi  r19, 160
+    ldi  r20, 147
 L1: dec  r20
     brne L1
     dec  r19
     brne L1
     dec  r18
     brne L1
+    nop
+
 
 	ret
 ;----------------------------------------
@@ -228,13 +230,11 @@ ISR_TWI:
 	in		r16, SREG
 	push	r16
 
-	ldi		r16, NO_SKITTLE
-	sts		(COLOR_POS), r16
-
 	in		r16, TWSR
 	cpi		r16, 0x80
 	brne	NO_DATA
-	in		r17, TWDR
+	in		r16, TWDR
+	sts		(COLOR_POS), r16
 NO_DATA:
 	ldi		r16, (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE)
 	out		TWCR, r16
@@ -247,33 +247,9 @@ NO_DATA:
 ;-----------------------------------------
 
 
-ADC_ISR:
-	push	r16
-	in		r16, SREG
-	push	r16
-	push	r17
 
-	in		r16, ADCL
-	in		r17, ADCH
 
-	cpi		r16, 0x0F
-	brlo	NO_OVER_CURRENT
-	 
-	ldi		r16, (1<<PB0)
-	out		PORTB, r16
-	jmp		ADC_DONE
 
-NO_OVER_CURRENT:
-	ldi		r16, (0<<PB0)
-	out		PORTB, r16
-
-ADC_DONE:
-	pop		r17
-	pop		r16
-	out		SREG, r16
-	pop		r16
-	reti
-;-----------------------------------------
 
 
 HW_INIT:
@@ -281,8 +257,7 @@ HW_INIT:
 	call	FIRST_INIT
 	call	TIMER1_INIT
 	call	TIMER0_INIT
-//	call	ADC_INIT
-//	call	TWI_SLAVE_INIT
+	call	TWI_SLAVE_INIT
 
 	ret
 
@@ -340,27 +315,8 @@ TIMER0_INIT:	;8bit timer
 
 	ret
 
-ADC_INIT: 
-/*
-***ADC SETTINGS***
-AREF
-Left adjusted
-ADC0
 
-ADC always enabled
-Auto Trigger enabled
-Interrupt enabled
-Prescaler: 32 ((8MHz/32)= ADC_FREQ = 250KHz)
-Free Running mode (SIFOR defaults to Free Running)
-*/
-	ldi		r16, (0<<REFS1)|(0<<REFS0)|(0<<ADLAR)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0)
-	out		ADMUX, r16
-
-	ldi		r16, (1<<ADEN)|(1<<ADSC)|(1<<ADATE)|(1<<ADIE)|(1<<ADPS2)|(0<<ADPS1)|(1<<ADPS0) 
-	out		ADCSRA, r16
-
-	ret
-
+;--------------------------------------------
 TWI_SLAVE_INIT:
 	ldi		r16, 0b11010010 //0x69 but shifted
 	out		TWAR, r16	
@@ -368,7 +324,6 @@ TWI_SLAVE_INIT:
 	out		TWCR, r16
 	ret
 ;--------------------------------------------
-
 //A = LLOWER DISK
 //B = UPPER DISK
 
