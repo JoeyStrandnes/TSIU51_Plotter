@@ -26,8 +26,8 @@
 	.equ RGB_AUTO_INC_BIT = 0b00100000
 
 ////////// RGB-SENSOR USER CONFIG ////
-	.equ ATIME_VALUE = 0xF6 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
-	.equ GAIN_VALUE  = 0x01 //00=1X, 01=4X, 10=16X, 11=60X
+	.equ ATIME_VALUE = 0xE0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
+	.equ GAIN_VALUE  = 0x00 //00=1X, 01=4X, 10=16X, 11=60X
 	.equ PRECISION   = 64  //GIVES OUR NORMALIZE_RGB_DATA A PRECISION (2^N = PRECISION)
 	.equ PRECISION_EXP = 6  //log2(PRECISION) = N
 ////////// TWI USER CONFIG ////
@@ -114,16 +114,19 @@ BOOT:
 	out SPH, r16
 	ldi r16, LOW(RAMEND)
 	out SPL, r16
-/*
+
+	ldi YH,HIGH(SRAM_START)
+	ldi YL,LOW(SRAM_START) 
+	ldi r16, 20
 	call INIT_CLEAR_SRAM // puts zeroes in the first N bytes
 	call TWI_INIT
 	call RGB_INIT //Current slave is now the RGB-sensor
 	call INT0_INIT
 	call LCD_INIT
+	call RGB_DELAY
 	call UPDATE_DISPLAY
-	//sei 
-*/
-	clr r22 // TEST MED KNAPP
+	sei 
+
 	jmp MAIN
 
 ///////////////////////////////////////////////////////////////////
@@ -132,7 +135,7 @@ MAIN:
 
 
 	
-
+/*
 	ldi r16, LOW(731-73)
 	sts CDATAL, r16
 	ldi r16, HIGH(731-73)
@@ -143,13 +146,13 @@ MAIN:
 	sts GDATAL, r16
 	ldi r16, 204-20
 	sts BDATAL, r16
-
-
-	//call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
+*/
+DONE:
+/*	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
 	call COMPARE
 	call COLOR_MATCH
-	//call INIT_CLEAR_SRAM
-DONE:
+	call INIT_CLEAR_SRAM*/
+
 
 	rjmp DONE
 
@@ -234,36 +237,36 @@ SHIFT_GAVE_NO_CARRY:
 	ret
 
 ///////////////////////////////////////////////////////////////////
-	.equ OFFSET = 5
+	///REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xE6 WITH CLIP
 RED:
-	.equ RED_CLEAR = 631
-	.equ RED_RED = 222
-	.equ RED_GREEN = 202
-	.equ RED_BLUE = 184
+	.equ RED_CLEAR = 460
+	.equ RED_RED = 159
+	.equ RED_GREEN = 144
+	.equ RED_BLUE = 135
 
 GREEN:
-	.equ GREEN_CLEAR = 666
-	.equ GREEN_RED = 203
-	.equ GREEN_GREEN = 242
-	.equ GREEN_BLUE = 195
+	.equ GREEN_CLEAR = 497
+	.equ GREEN_RED = 150
+	.equ GREEN_GREEN = 174
+	.equ GREEN_BLUE = 147
 
 ORANGE:
-	.equ ORANGE_CLEAR = 673
-	.equ ORANGE_RED = 244
-	.equ ORANGE_GREEN = 215
-	.equ ORANGE_BLUE = 190
+	.equ ORANGE_CLEAR = 531
+	.equ ORANGE_RED = 195
+	.equ ORANGE_GREEN = 164
+	.equ ORANGE_BLUE = 148
 
 YELLOW:
-	.equ YELLOW_CLEAR = 731
-	.equ YELLOW_RED = 255
-	.equ YELLOW_GREEN = 249
-	.equ YELLOW_BLUE = 204
+	.equ YELLOW_CLEAR = 579
+	.equ YELLOW_RED = 207
+	.equ YELLOW_GREEN = 194
+	.equ YELLOW_BLUE = 156
 
 PURPLE:
-	.equ PURPLE_CLEAR = 591
-	.equ PURPLE_RED = 185
-	.equ PURPLE_GREEN = 198
-	.equ PURPLE_BLUE = 182
+	.equ PURPLE_CLEAR = 454
+	.equ PURPLE_RED = 141
+	.equ PURPLE_GREEN = 147
+	.equ PURPLE_BLUE = 139
 
 ///////////////////////////////////////////////////////////////////
 COMPARE:
@@ -407,17 +410,21 @@ ISR_INT0:
 	push r16
 	in r16, SREG
 	push r16
-	push r17
+
 	call RGB_DELAY_INTEGRATION
 	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
-	//NORMALIZE_VALUES del av COMPARE?
-	//COMPARE
-	//COLORMATCH
-
+	call COMPARE
+	call COLOR_MATCH
+	call UPDATE_NUMBER_OF_SKITTLES
+	call UPDATE_DISPLAY
 	call SEND_SKITTLE_COLOR_TO_SLAVE
+
 	//CLEAR RED_DIFF OSV mha CLEAR SRAM
-	
-	pop r17
+	ldi YH,HIGH(RED_DIFF)
+	ldi YL,LOW(RED_DIFF) 
+	ldi r16, 5
+	call INIT_CLEAR_SRAM
+
 	pop r16
 	out SREG, r16
 	pop r16
@@ -433,13 +440,14 @@ INT0_INIT:
 	ret
 ///////////////////////////////////////////////////////////////////
 INIT_CLEAR_SRAM:
-	ldi r17, 20 //NUMBER OF BYTES TO CLEAR
-	ldi r16, 0 //SHOULD BE 0 but for debug purpse atm
-	ldi YH,HIGH(SRAM_START)
-	ldi YL,LOW(SRAM_START)
+	//ldi r17, 15 //NUMBER OF BYTES TO CLEAR
+	//ldi r16, 0 //SHOULD BE 0 but for debug purpse atm
+	clr r17
+	//ldi YH,HIGH(SRAM_START)
+	//ldi YL,LOW(SRAM_START)
 INIT_CLEAR_SRAM_LOOP:
-	st Y+, r16
-	dec r17
+	st Y+, r17
+	dec r16
 	brne INIT_CLEAR_SRAM_LOOP
 	ret
 ///////////////////////////////////////////////////////////////////
@@ -486,8 +494,8 @@ RGB_INIT:
 	call TWI_SEND_DATA
 	//
 	call TWI_STOP_PULSE
-	//call RGB_DELAY_INTEGRATION //WAITS SO THE RGB-REGISTERS ARE VALID
-	//call RGB_DELAY_INTEGRATION //EXTRA SAFETY
+	call RGB_DELAY_INTEGRATION //WAITS SO THE RGB-REGISTERS ARE VALID
+	
 	pop r17
 	ret
 ///////////////////////////////////////////////////////////////////
@@ -717,6 +725,28 @@ SEND_SKITTLE_COLOR_TO_SLAVE:
 	sts LATEST_SKITTLE_COLOR, r17 //MÅSTE FIXA CLEAR_SRAM SÅ DETTA BEHÅLLS
 	ret
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+UPDATE_NUMBER_OF_SKITTLES:
+	push r16
+	push YH
+	push YL
+
+	ldi YH, HIGH(LATEST_SKITTLE_COLOR)
+	ldi YL, LOW(LATEST_SKITTLE_COLOR)
+	ld r16, Y //LOADS WHICH SKITTLE TO INC  RED = 0, GREEN = 1 ...
+	inc r16
+UPDATE_NUMBER_OF_SKITTLES_LOOP:
+	adiw YH:YL, 1
+	dec r16
+	brne UPDATE_NUMBER_OF_SKITTLES_LOOP	
+	ld r16, Y
+	inc r16
+	st Y, r16
+
+	pop YL
+	pop YH
+	pop r16
+	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 UPDATE_DISPLAY:
 	push r20
