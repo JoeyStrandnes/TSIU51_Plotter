@@ -10,4 +10,5 @@ Skittle sort är en sorteringsmaskin för kursen "Mikrodatorprojektet".
 - jm162a 2x16 numerisk LCD
 - TCS34725 (RGB sensor)
 
-![alt text](https://raw.githubusercontent.com/JoeyStrandnes/TSIU51_Skittle-Sort/Project Guidelines/Images/Skittle-Sort-Assembly-2.jpg)
+![Assembly](https://i.imgur.com/zAWBzEK.jpg)
+![PCB](https://i.imgur.com/a5Wbd8q.jpg)
