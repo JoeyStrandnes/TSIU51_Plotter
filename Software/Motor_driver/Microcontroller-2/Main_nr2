@@ -12,6 +12,8 @@
 	jmp		ISR_LOWER_TRIGGER
 	.org	TWIaddr
 	jmp		ISR_TWI
+	.org	0x1C
+	jmp		ADC_ISR
 	.org	0x26	//Timer0 comp
 	jmp		ISR_TIMER0_COMP
 
@@ -49,20 +51,6 @@ START:
 
 
 WAIT_FOR_COLOR:
-	sei
-	lds		r16, (COLOR_POS)
-	cpi		r16, NO_SKITTLE
-	cli
-	brne	FOUND_COLOR
-	rjmp	WAIT_FOR_COLOR
-FOUND_COLOR:
-	
-	ldi		r16, HIGH(SERVO_CW)
-	out		OCR1AH, r16
-	ldi		r16, LOW(SERVO_CW)
-	out		OCR1AL, r16
-
-
 	rjmp	WAIT_FOR_COLOR
 
 ;---------------------------------------
@@ -88,7 +76,12 @@ ISR_UPPER_TRIGGER:
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1BL, r16
 
-
+	//SEND PULSE THAT SORTING IS COMPLETE
+	ldi		r16, (0 << 1)
+	out		PORTB, r16 
+	nop
+	ldi		r16, (0 << 0)
+	out		PORTB, r16
 
 	;pull all used
 	pop		r16
@@ -138,13 +131,29 @@ NORMAL_PROCEDURE:
 	cpi		r16, LOW(SERVO_ST)
 	breq	ISR_LOWER_TRIGGER_END
 
+	in		r16, OCR1AL		;servo direction
+	cpi		r16, SERVO_CCW		
+	breq	CCW_DIR
+CW_DIR:
 	lds		r16, (POSL)
-	inc		r16	 
-POS_LIM:
-	cpi		r16, 5	//over limit
+	inc		r16
+	rjmp	DIR_LIM
+CCW_DIR:
+	lds		r16, (POSL)
+	dec		r16
+	;
+DIR_LIM:
+	ori		r16, 0	;check negative
+	brmi	UND_LIM	;under limit
+	cpi		r16, 5	;over limit
 	brne	POS_OK
-	clr		r16		
+	clr		r16
+	rjmp	POS_OK
+UND_LIM:
+	ldi		r16, 4	;***utanf?r sensor***
+	;
 POS_OK:
+	
 	sts		(POSL), r16	//new pos
 	lds		r17, (COLOR_POS)
 	cp		r16, r17
@@ -180,6 +189,9 @@ ISR_LOWER_TRIGGER_END:
 DELAY:
 ; Delay 320 000 cycles
 ; 40ms at 8.0 MHz
+	push r18
+	push r19
+	push r20
 
     ldi  r18, 2
     ldi  r19, 160
@@ -192,7 +204,9 @@ L1: dec  r20
     brne L1
     nop
 
-
+	pop r20
+	pop r19
+	pop r18
 	ret
 ;----------------------------------------
 
@@ -221,8 +235,23 @@ WRONG_POSITION:
 	pop		r16
 	reti
 ;----------------------------------------
+ADC_ISR:
+	in		r16, ADCL
+	in		r17, ADCH
 
+	cpi		r16, 0x0F
+	brlo	NO_OVER_CURRENT
+	 
+	//HÄR SKA VI STANNA MOTORN
+	jmp		ADC_DONE
 
+NO_OVER_CURRENT:
+	
+
+ADC_DONE:
+
+	reti
+;----------------------------------------
 
 
 ISR_TWI:
@@ -235,6 +264,32 @@ ISR_TWI:
 	brne	NO_DATA
 	in		r16, TWDR
 	sts		(COLOR_POS), r16
+	cpi		r16, NO_SKITTLE
+	breq	NO_DATA //BAD READING
+
+	lds		r17, (POSL)
+	cp		r16, r17
+	breq	LOWER_NO_MOVEMENT
+	brlo	LOWER_ROTATE_CCW
+LOWER_ROTATE_CW:
+	 
+	ldi		r16, HIGH(SERVO_CW)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_CW)
+	out		OCR1AL, r16
+	rjmp		NO_DATA
+LOWER_ROTATE_CCW:
+	ldi		r16, HIGH(SERVO_CCW)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_CCW)
+	out		OCR1AL, r16
+	rjmp	NO_DATA
+LOWER_NO_MOVEMENT:
+	ldi		r16, HIGH(SERVO_CCW)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_CCW)
+	out		OCR1BL, r16
+
 NO_DATA:
 	ldi		r16, (1<<TWINT)|(1<<TWEA)|(1<<TWEN)|(1<<TWIE)
 	out		TWCR, r16
@@ -258,7 +313,7 @@ HW_INIT:
 	call	TIMER1_INIT
 	call	TIMER0_INIT
 	call	TWI_SLAVE_INIT
-
+	//call	ADC_INIT
 	ret
 
 
@@ -272,9 +327,8 @@ FIRST_INIT:
 	ldi		r16, 0xF0	
 	out		DDRD, r16	;D 4-7 output
 
-	ldi		r16, 0x00
-	out		DDRB, r16	;B input 
-
+	ldi		r16, 0b00000011
+	out		DDRB, r16    ;B 0-1 output  0 till MC1, 1 till högtalare
 	ret
 
 TIMER1_INIT:
@@ -302,7 +356,7 @@ TIMER1_INIT:
 	ret
 
 
-	
+;--------------------------------------------	
 TIMER0_INIT:	;8bit timer
 	ldi		r16, (1<<CS02)|(0<<CS01)|(1<<CS00)|(0<<WGM00)|(1<<WGM01) // Prescaler /1024, CTC mode
 	out		TCCR0, r16	
@@ -314,8 +368,27 @@ TIMER0_INIT:	;8bit timer
 	out		OCR0, r16
 
 	ret
+;--------------------------------------------
+ADC_INIT: 
+/*
+***ADC SETTINGS***
+AREF
+Left adjusted
+ADC0
 
+ADC always enabled
+Auto Trigger enabled
+Interrupt enabled
+Prescaler: 32 ((8MHz/32)= ADC_FREQ = 250KHz)
+Free Running mode (SIFOR defaults to Free Running)
+*/
+	ldi		r16, (0<<REFS1)|(0<<REFS0)|(0<<ADLAR)|(0<<MUX4)|(0<<MUX3)|(0<<MUX2)|(0<<MUX1)|(0<<MUX0)
+	out		ADMUX, r16
 
+	ldi		r16, (1<<ADEN)|(1<<ADSC)|(1<<ADATE)|(1<<ADIE)|(1<<ADPS2)|(0<<ADPS1)|(1<<ADPS0) 
+	out		ADCSRA, r16
+
+	ret
 ;--------------------------------------------
 TWI_SLAVE_INIT:
 	ldi		r16, 0b11010010 //0x69 but shifted
@@ -324,7 +397,7 @@ TWI_SLAVE_INIT:
 	out		TWCR, r16
 	ret
 ;--------------------------------------------
-//A = LLOWER DISK
+//A = LOWER DISK
 //B = UPPER DISK
 
 WARM:
@@ -337,7 +410,7 @@ WARM:
 	sts		(POSU), r16
 	ldi		r16, NO_SKITTLE
 	sts		(COLOR_POS), r16
-	ldi		r16, 0xFF
+	ldi		r16, 0x00 //0xFF TEST
 	sts		(POSL), r16
 
 	ldi		r16, HIGH(SERVO_CCW)
