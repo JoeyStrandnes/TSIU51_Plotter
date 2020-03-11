@@ -25,7 +25,7 @@
 .equ RGB_COMMAND_BIT = 0x80
 .equ RGB_AUTO_INC_BIT = 0b00100000
 //////// RGB-SENSOR USER CONFIG ////////////////////////////////////////
-.equ ATIME_VALUE = 0xE0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
+.equ ATIME_VALUE = 0xD0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
 .equ GAIN_VALUE  = 0x00 //00=1X, 01=4X, 10=16X, 11=60X
 .equ PRECISION   = 64  //GIVES OUR NORMALIZE_RGB_DATA A PRECISION (2^N = PRECISION)
 .equ PRECISION_EXP = 6  //log2(PRECISION) = N
@@ -119,13 +119,13 @@ BOOT:
 	ldi YL,LOW(SRAM_START) 
 	ldi r16, 20
 	call INIT_CLEAR_SRAM // puts zeroes in N bytes
-/*	call TWI_INIT
+	call TWI_INIT
 	call RGB_INIT //Current slave is now the RGB-sensor
 	call INT0_INIT
 	call LCD_INIT
 	call UPDATE_DISPLAY
 	sei 
-*/
+
 	jmp MAIN
 
 ///////////////////////////////////////////////////////////////////
@@ -153,10 +153,20 @@ MAIN:
 	sts BDATAH, r16
 */
 DONE:
-	//call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
-	//call COMPARE
-	//call COLOR_MATCH
-	//call INIT_CLEAR_SRAM
+/*
+	call RGB_DELAY_INTEGRATION
+	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
+	call COMPARE
+	call COLOR_MATCH
+	call UPDATE_NUMBER_OF_SKITTLES
+	call UPDATE_DISPLAY
+	//call SEND_SKITTLE_COLOR_TO_SLAVE
+
+	ldi YH,HIGH(RED_DIFF)
+	ldi YL,LOW(RED_DIFF) 
+	ldi r16, 5
+	call INIT_CLEAR_SRAM 
+*/
 	rjmp DONE
 
 
@@ -165,34 +175,34 @@ DONE:
 // REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xE6 WITH CLIP
 // CLEAR-VALUE*PRECISION MUST BE WITHIN 16bit
 RED://FEL
-	.equ RED_CLEAR = 852
-	.equ RED_RED = 320
-	.equ RED_GREEN = 299
-	.equ RED_BLUE = 264
+	.equ RED_CLEAR = 649
+	.equ RED_RED = 245
+	.equ RED_GREEN = 210
+	.equ RED_BLUE = 186
 
 GREEN:
-	.equ GREEN_CLEAR = 497
-	.equ GREEN_RED = 150
-	.equ GREEN_GREEN = 174
-	.equ GREEN_BLUE = 147
+	.equ GREEN_CLEAR = 681
+	.equ GREEN_RED = 237
+	.equ GREEN_GREEN = 237
+	.equ GREEN_BLUE = 195
 
 ORANGE:
-	.equ ORANGE_CLEAR = 531
-	.equ ORANGE_RED = 195
-	.equ ORANGE_GREEN = 164
-	.equ ORANGE_BLUE = 148
+	.equ ORANGE_CLEAR = 697
+	.equ ORANGE_RED = 271
+	.equ ORANGE_GREEN = 223
+	.equ ORANGE_BLUE = 194
 
 YELLOW:
-	.equ YELLOW_CLEAR = 579
-	.equ YELLOW_RED = 207
-	.equ YELLOW_GREEN = 194
-	.equ YELLOW_BLUE = 156
+	.equ YELLOW_CLEAR = 773
+	.equ YELLOW_RED = 295
+	.equ YELLOW_GREEN = 260
+	.equ YELLOW_BLUE = 211
 
 PURPLE:
-	.equ PURPLE_CLEAR = 454
-	.equ PURPLE_RED = 141
-	.equ PURPLE_GREEN = 147
-	.equ PURPLE_BLUE = 139
+	.equ PURPLE_CLEAR = 640
+	.equ PURPLE_RED = 228
+	.equ PURPLE_GREEN = 212
+	.equ PURPLE_BLUE = 188
 
 ///////////////////////////////////////////////////////////////////
 //I den färdiga produkten ska denna interupten triggas på att trumman är tillbaka i utgångsläge från 
