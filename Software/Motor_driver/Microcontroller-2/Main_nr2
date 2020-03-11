@@ -69,7 +69,7 @@ ISR_UPPER_TRIGGER:
 	ldi		r16, LOW(SERVO_CW)
 	out		OCR1BL, r16
 
-	call	DELAY
+	//call	DELAY
 	
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1BH, r16
@@ -77,12 +77,12 @@ ISR_UPPER_TRIGGER:
 	out		OCR1BL, r16
 
 	//SEND PULSE THAT SORTING IS COMPLETE
-	ldi		r16, (0 << 1)
+	ldi		r16, 0
 	out		PORTB, r16 
-	nop
-	ldi		r16, (0 << 0)
+	call	DELAY
+	ldi		r16, 1
 	out		PORTB, r16
-
+SKIP_INTERUPT_FIRST_SPIN:
 	;pull all used
 	pop		r16
 	out		SREG, r16
@@ -104,7 +104,6 @@ ISR_LOWER_TRIGGER:
 WARM_DRUM:
 	sbrs	TOGGLE_REG, 0
 	rjmp	FIRST_SPIN
-
 	clr		r16
 	out		TCNT0, r16
 	clr		TIMER0_REG
@@ -112,16 +111,22 @@ WARM_DRUM:
 
 FIRST_SPIN:
 	sbrs	TOGGLE_REG, 1
-	rjmp	NORMAL_PROCEDURE
+	rjmp	FIRST_SPIN_FIRST_TRIGGER
+	cbr		TOGGLE_REG, 2
+	rjmp	ISR_LOWER_TRIGGER_END
 
-	//call	DELAY	
+FIRST_SPIN_FIRST_TRIGGER:
 
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1AH, r16
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1AL, r16
-
-	cbr		TOGGLE_REG, 2
+	//SKA DEN OCKSÅ LIGGA HÄR?????????
+	//ldi		r16, 0
+	//out		PORTB, r16 
+	//call	DELAY
+	//ldi		r16, 1
+	//out		PORTB, r16
 	rjmp	ISR_LOWER_TRIGGER_END
 	
 
@@ -329,6 +334,8 @@ FIRST_INIT:
 
 	ldi		r16, 0b00000011
 	out		DDRB, r16    ;B 0-1 output  0 till MC1, 1 till högtalare
+	ldi		r16, 1
+	out		PORTB, r16
 	ret
 
 TIMER1_INIT:
@@ -410,7 +417,7 @@ WARM:
 	sts		(POSU), r16
 	ldi		r16, NO_SKITTLE
 	sts		(COLOR_POS), r16
-	ldi		r16, 0x00 //0xFF TEST
+	ldi		r16, 0x00 
 	sts		(POSL), r16
 
 	ldi		r16, HIGH(SERVO_CCW)
