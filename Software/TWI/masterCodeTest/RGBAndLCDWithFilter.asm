@@ -25,9 +25,9 @@
 .equ RGB_COMMAND_BIT = 0x80
 .equ RGB_AUTO_INC_BIT = 0b00100000
 //////// RGB-SENSOR USER CONFIG ////////////////////////////////////////
-.equ ATIME_VALUE = 0xD0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
+.equ ATIME_VALUE = 0xD0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.5 ms 
 .equ GAIN_VALUE  = 0x00 //00=1X, 01=4X, 10=16X, 11=60X
-.equ PRECISION   = 64  //SCALES UP OUR REFERENCE-CLEARVALUES. SHOULD BE AS CLOSE TO 16 BIT WITHOUT OVERFLOWING
+.equ PRECISION   = 64  //SCALES UP OUR REFERENCE-CLEARVALUES. CLEARDATA*PRECISION SHOULD BE AS CLOSE TO 16 BIT WITHOUT OVERFLOWING
 .equ PRECISION_EXP = 6  // EXPONENT OF PRECISION IN BASE 2
 //////// COLOR ALIAS ////////////////////////////////////////////
 .equ NUMBER_OF_COLORS = 5
@@ -38,7 +38,7 @@
 .equ PURPLE_SKITTLE = 4
 .equ NO_SKITTLE     = 5
 //////// TWI USER CONFIG ////////////////////////////////////////
-.equ TWI_BITRATE = 32  //100kHz
+.equ TWI_BITRATE   = 32  //100kHz
 .equ TWI_PRESCALAR = 0 //100kHz
 //////// TWI SLAVE ADDR ////////////////////////////////////////
 .equ RGB_SLAVE_ADDR = 0x29
@@ -67,7 +67,7 @@
 //////// MEMORY LAYOUT ////////////////////////////////////////
 	.dseg
 	.org 0x0060 //SRAM_START
-//////// LATEST RGB-VALUES 
+//////// LATEST CRGB-VALUES ////////////////////////////////////////
 CDATAL:	.byte 1
 CDATAH:	.byte 1
 RDATAL:	.byte 1
@@ -76,22 +76,20 @@ GDATAL:	.byte 1
 GDATAH:	.byte 1
 BDATAL:	.byte 1
 BDATAH:	.byte 1
-//////// CURRENT SLAVE ////////////////////////////////////////
-CURRENT_SLAVE:
-	.byte 1
+
 //////// LATEST COLOR_DIFFERENCES ////////////////////////////////////////
 RED_DIFF:
-	.byte 1
+	.byte 2
 GREEN_DIFF:
-	.byte 1
+	.byte 2
 ORANGE_DIFF:
-	.byte 1
+	.byte 2
 YELLOW_DIFF:
-	.byte 1
+	.byte 2
 PURPLE_DIFF:
-	.byte 1
+	.byte 2
 NO_SKITTLE_DIFF:
-	.byte 1
+	.byte 2
 //////// COLOR OF LATEST SKITTLE SORTED ////////////////////////////////////////
 // 0 = RED, 1 = GREEN, 2 = ORANGE, 3 = YELLOW, 4 = PURPLE, 5 = NO_SKITTLE
 LATEST_SKITTLE_COLOR:
@@ -108,6 +106,9 @@ YELLOW_N:
 PURPLE_N:
 	.byte 1
 NO_SKITTLE_N:
+	.byte 1
+//////// CURRENT TWI SLAVE ////////////////////////////////////////
+CURRENT_SLAVE:
 	.byte 1
 	.cseg
 //////// RESET/INTERRUPT VECTORS ////////////////////////////////////////
@@ -127,63 +128,63 @@ BOOT:
 
 	ldi YH,HIGH(SRAM_START)
 	ldi YL,LOW(SRAM_START) 
-	ldi r16, 22//20
-	call INIT_CLEAR_SRAM // puts zeroes in N bytes
-	call TWI_INIT
+	ldi r16, 3*NUMBER_OF_COLORS + 10
+	call INIT_CLEAR_SRAM // puts zeroes in N bytes from Y
+/*	call TWI_INIT
 	call RGB_INIT //Current slave is now the RGB-sensor
 	call INT0_INIT
 	call LCD_INIT
 	call UPDATE_DISPLAY
 	sei 
-
+*/
 	jmp MAIN
 
 ///////////////////////////////////////////////////////////////////
 
 MAIN:	
-/*	TEST-VÄRDEN
+
 	ldi r16, LOW(521)
 	sts CDATAL, r16
 	ldi r16, HIGH(521)
 	sts CDATAH, r16
 
-	ldi r16, LOW(290)
+	ldi r16, LOW(590)
 	sts RDATAL, r16
-	ldi r16, HIGH(290)
+	ldi r16, HIGH(590)
 	sts RDATAH, r16
 
-	ldi r16, LOW(266)
+	ldi r16, LOW(1023)
 	sts GDATAL, r16
-	ldi r16, HIGH(266)
+	ldi r16, HIGH(1023)
 	sts GDATAH, r16
 
-	ldi r16, LOW(253)
+	ldi r16, LOW(555)
 	sts BDATAL, r16
-	ldi r16, HIGH(253)
+	ldi r16, HIGH(555)
 	sts BDATAH, r16
-*/
+
 DONE:
-/*
-	call RGB_DELAY_INTEGRATION
-	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
+
+	//call RGB_DELAY_INTEGRATION
+	//call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
 	call COMPARE
 	call COLOR_MATCH
-	call UPDATE_NUMBER_OF_SKITTLES
-	call UPDATE_DISPLAY
+	//call UPDATE_NUMBER_OF_SKITTLES
+	//call UPDATE_DISPLAY
 	//call SEND_SKITTLE_COLOR_TO_SLAVE
 
 	ldi YH,HIGH(RED_DIFF)
 	ldi YL,LOW(RED_DIFF) 
-	ldi r16, NUMBER_OF_COLORS
-	call INIT_CLEAR_SRAM 
-*/
+	ldi r16, 2*NUMBER_OF_COLORS
+	call INIT_CLEAR_SRAM //CLEAR LATEST DIFFERENCES
+
 	rjmp DONE
 
 
 
 ///////////////////////////////////////////////////////////////////
 // REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xD0
-// CLEAR-VALUE*PRECISION MUST BE WITHIN 16bit
+// ALL CLEAR-VALUE*PRECISION MUST BE WITHIN 16bit
 RED:
 	.equ RED_CLEAR = 675
 	.equ RED_RED = 227
@@ -221,14 +222,6 @@ NOTHING:
 	.equ NO_SKITTLE_BLUE = 192
 
 ///////////////////////////////////////////////////////////////////
-//I den färdiga produkten ska denna interupten triggas på att trumman är tillbaka i utgångsläge från 
-// MC-Slaven på något sätt. Då ska den göra följande:
-// 1. Vänta en hel RGB-cykel för att få rätt färgdata. Skittlen trillar ju inte ner framför sensorn förrän trumman är tillbaka
-// 2. Läsa av färg-data på Skittlen.
-// 3. Konvertera det till en av de 5 olika färgerna eller en felkod för: "ingen skittle framför sensorn" 
-// 4. Uppdatera skärmen med nya antalet Skittles - Eventuellt vänta med uppdateringen till nästa gång trumman är tillbaka.
-// Det ger uppräkning efter att Skittlen trillat ner i sin ränna. Då ska detta steget utföras först.
-// 5. Skicka vilken färg på Skittle till MC-Slaven för sortering.
 ISR_INT0:
 	push r16
 	in r16, SREG
@@ -259,7 +252,7 @@ ISR_INT0:
 
 	ldi YH,HIGH(RED_DIFF)
 	ldi YL,LOW(RED_DIFF) 
-	ldi r16, NUMBER_OF_COLORS
+	ldi r16, 2*NUMBER_OF_COLORS
 	call INIT_CLEAR_SRAM 
 
 	pop r16
@@ -296,7 +289,7 @@ COMPUTE_NEXT_SKITTLE_DIFFERENCE:
 	ldi YL, LOW(BDATAL)
 	call GET_COLOR_DIFFERENCE
 
-	adiw XH:XL, 1 //RED_DIFF -> GREEN_DIFF ...
+	adiw XH:XL, 2 //RED_DIFF -> GREEN_DIFF ...
 	adiw ZH:ZL, 8 //RED REFERENCE CLEAR-VALUE -> GREEN REFERENCE CLEAR-VALUE ...
 	
 	dec r16
@@ -318,10 +311,10 @@ GET_COLOR_DIFFERENCE:
 	ldd r16, Y+1 
 	push r16 //PUSH RGBDATAH
 
-	//call NORMALIZE_RGB_DATA //ANVÄNDER Z OCH Y, ÄNDRAR DOM INTE!
-	call COMPUTE_REF_DIFF   //ANVÄNDER Z OCH Y, ÄNDRAR DOM INTE!
-	call SAVE_DIFFERENCE	//ANVÄNDER X, ÄNDRAR DEN INTE!
-
+	
+	call COMPUTE_REFERENCE_DIFFERENCE   //ANVÄNDER X, Y, Z. ÄNDRAR DOM INTE!
+	//call NORMALIZE_RGB_DATA //ANVÄNDER Y OCH Z. ÄNDRAR DOM INTE!
+	//call COMPUTE_REFERENCE_DIFFERENCE 
 	pop r16
 	std Y+1, r16 
 	pop r16 //POP RGBDATAH
@@ -356,6 +349,7 @@ NORMALIZE_RGB_DATA:
 	
 	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
 	call DIVIDE_BY_PRECISION  //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
+	//TODO: CHECK IF WITHIN 16BIT
 	mov r22, r18 //SAVE OUR QUOTIENT 
 	mov r23, r19 //SAVE OUR QUOTIENT
 
@@ -367,15 +361,15 @@ NORMALIZE_RGB_DATA:
 	
 	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
 	call DIVIDE_BY_PRECISION //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
-	
+	//TODO: CHECK IF WITHIN 16BIT
 	mov r16, r18 //MOVES OUR ANSWER INTO DIVIDEND
 	mov r17, r19 //MOVES OUR ANSWER INTO DIVIDEND
 	lds r18, CDATAL //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
 	lds r19, CDATAH //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
 	call div16u  //USES 14,15,16,17 RESULT IN R17:R16. REMAINDER IN R15:R14
 	
-	add r22, r16 //ADD REMAINDER TO OUR QUOTIENT
-	adc r23, r17 //ADD REMAINDER TO OUR QUOTIENT
+	add r22, r16 //ADD RESULT TO OUR QUOTIENT
+	adc r23, r17 //ADD RESULT TO OUR QUOTIENT
 	std Y+0, r22 //STORES THE NORMALIZED VALUE BACK INTO RGBDATAL
 	std Y+1, r23 //STORES THE NORMALIZED VALUE BACK INTO RGBDATAH
 
@@ -418,21 +412,24 @@ ROTATE_AGAIN:
 	ret
 
 ///////////////////////////////////////////////////////////////////
-//LEAVES THE ABSOLUTE DIFFERENCE OF MEASURED VALUE AND THE REFERENCE IN R25:R24 FOR SAVE_DIFFERENCE TO USE
-COMPUTE_REF_DIFF:	
+COMPUTE_REFERENCE_DIFFERENCE:	
+	push XH
+	push XL
 	push ZH
 	push ZL
 	push r16
 	push r17
-
+	push r24
+	push r25
+	//ADD OFFSET TO Z
 	ldi r16, LOW(CDATAL)
 	ldi r17, HIGH(CDATAL)
 	mov r24, YL
 	mov r25, YH
 	sub r24, r16
 	sbc r25, r17
-	add ZL, r24 //ADD OFFSET TO Z
-	adc ZH, r25 //ADD OFFSET TO Z
+	add ZL, r24 
+	adc ZH, r25 
 
 	lpm r16, Z+ //LOW BYTE OF REFERENCE-VALUE
 	lpm r17, Z  //HIGH BYTE OF REFERENCE-VALUE
@@ -441,72 +438,83 @@ COMPUTE_REF_DIFF:
 
 	sub r24, r16 //COMPUTE DIFFERENCE
 	sbc r25, r17 //COMPUTE DIFFERENCE
-	brcc NO_UNDERFLOW
+	brcc SAVE_DIFFERENCE
 	neg r24
 	com r25
-NO_UNDERFLOW:
-
-	pop r17
-	pop r16
-	pop ZL
-	pop ZH
-	ret
-///////////////////////////////////////////////////////////////////
-//FROM COMPUTE_REF_DIFF THE ABSOLUTE VALUE OF THE DIFFERENCE IS IN R25:R24
 SAVE_DIFFERENCE:
-	push r16
-	ld r16, X // GET PREVIOUS VALUE IN SRAM
-	cpi r25, 0 //DIFF BIGGER THAN 255 ??
-	brne BOGUS_VALUE
+	///SAVE DIFFERNCE ///
+	///TODO: MULTIPLY W/ WEIGTH CONSTANTS???? ATIME DEP?
+	ld r16, X+ // GET PREVIOUS VALUE IN SRAM
+	ld r17, X+ // GET PREVIOUS VALUE IN SRAM
+
 	add r16, r24
-	brcs BOGUS_VALUE
-	jmp SAVE_DIFFERENCE_DONE
-BOGUS_VALUE:
-	ldi r16, 0xFF
+	adc r17, r25
+	brcc DIFFERENCE_OK
+	ldi r16, 0xFF //SET DIFF TO MAX
+	ldi r17, 0xFF //SET DIFF TO MAX
+DIFFERENCE_OK:
+	
+	st -X, r17 //STORE NEW DIFFERENCE
+	st -X, r16
 
-SAVE_DIFFERENCE_DONE:
-	st X, r16
-	pop r16
-	ret
-///////////////////////////////////////////////////////////////////
-COLOR_MATCH:
-	push XH
-	push XL
-	push ZH
-	push ZL
-	push r16
-	push r17
-	push r18
-
-	ldi XH, HIGH(RED_DIFF) //X PEKAR PÅ MINSTA VÄRDET
-	ldi XL, LOW(RED_DIFF)
-	ldi YH, HIGH(GREEN_DIFF)
-	ldi YL, LOW(GREEN_DIFF)
-	ldi r18, NUMBER_OF_COLORS-1 //LOOP COUNTER: NUMBER_OF_COLORS-1
-COLOR_MATCH_NEXT_SKITTLE:
-	ld r16, X
-	ld r17, Y
-	// X < Y ?
-	cp r16, r17
-	brmi X_POINTER_STAYS //VARFÖR BEHÖVS BÅDA?
-	brlo X_POINTER_STAYS //VARFÖR BEHÖVS BÅDA?
-	mov XH, YH
-	mov XL, YL
-X_POINTER_STAYS:
-	adiw YH:YL, 1
-	dec r18
-	brne COLOR_MATCH_NEXT_SKITTLE
-	//TODO: FELKONTROLL - OM DET MINSTA TALET (SOM X PEKAR PÅ) HAR EN DIFF PÅ MER ÄN 100(?) SÅ Spara NO_SKITTLE/BAD_READING?
-	subi XL, LOW(RED_DIFF) // GET OFFSET FOR COLOR 
-	sts LATEST_SKITTLE_COLOR, XL
-
-	pop r18
+	pop r25
+	pop r24
 	pop r17
 	pop r16
 	pop ZL
 	pop ZH
 	pop XL
 	pop XH
+	ret
+
+///////////////////////////////////////////////////////////////////
+COLOR_MATCH:
+	push YH
+	push YL
+	push ZH
+	push ZL
+	push r16
+	push r17
+	push r18
+	push r19
+	push r20
+
+	ldi ZH, HIGH(RED_DIFF) //Z PEKAR PÅ MINSTA VÄRDET
+	ldi ZL, LOW(RED_DIFF)
+	ldi YH, HIGH(GREEN_DIFF)
+	ldi YL, LOW(GREEN_DIFF)
+	ldi r20, NUMBER_OF_COLORS-1 //LOOP COUNTER: NUMBER_OF_COLORS-1
+COLOR_MATCH_NEXT_SKITTLE:
+	ldd r16, Z+0
+	ldd r17, Z+1
+	ldd r18, Y+0
+	ldd r19, Y+1
+	// Z < Y ?
+	sub r16, r18
+	sbc r17, r19
+	brmi Z_POINTER_STAYS 
+	brlo Z_POINTER_STAYS 
+
+	mov ZH, YH
+	mov ZL, YL
+Z_POINTER_STAYS:
+	adiw YH:YL, 2
+	dec r20
+	brne COLOR_MATCH_NEXT_SKITTLE
+	// GET OFFSET FOR COLOR OF SKITTLE THATS CLOSEST
+	subi ZL, LOW(RED_DIFF) 
+	lsr ZL 
+	sts LATEST_SKITTLE_COLOR, ZL
+
+	pop r20
+	pop r19
+	pop r18
+	pop r17
+	pop r16
+	pop ZL
+	pop ZH
+	pop YL
+	pop YH
 	ret
 ///////////////////////////////////////////////////////////////////
 INT0_INIT:
@@ -763,6 +771,8 @@ READ_NEXT_RBG_REGISTER:
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_INIT:	
+	push r16
+	push r20
 	ldi r16, 0x00
 	out DDRA, r16 // DB0-DB7 set to READMODE as default, will change briefly when writing.
 	ldi r16, 0x07 
@@ -787,6 +797,8 @@ LCD_INIT:
 	call LCD_INSTRUCTION_WRITE 
 
 	call RGB_DELAY //REUSING DELAY FUNCTION
+	pop r20
+	pop r16
 	// INIT DONE
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1283,4 +1295,3 @@ REF_VALUES:
 	.db LOW(YELLOW_CLEAR*PRECISION), HIGH(YELLOW_CLEAR*PRECISION), LOW(YELLOW_RED), HIGH(YELLOW_RED), LOW(YELLOW_GREEN), HIGH(YELLOW_GREEN), LOW(YELLOW_BLUE), HIGH(YELLOW_BLUE)
 	.db LOW(PURPLE_CLEAR*PRECISION), HIGH(PURPLE_CLEAR*PRECISION), LOW(PURPLE_RED), HIGH(PURPLE_RED), LOW(PURPLE_GREEN), HIGH(PURPLE_GREEN), LOW(PURPLE_BLUE), HIGH(PURPLE_BLUE)
 	.db LOW(NO_SKITTLE_CLEAR*PRECISION), HIGH(NO_SKITTLE_CLEAR*PRECISION), LOW(NO_SKITTLE_RED), HIGH(NO_SKITTLE_RED), LOW(NO_SKITTLE_GREEN), HIGH(NO_SKITTLE_GREEN), LOW(NO_SKITTLE_BLUE), HIGH(NO_SKITTLE_BLUE)
-
