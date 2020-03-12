@@ -30,7 +30,7 @@ COLOR_POS:
 
 
 	.def	TIMER0_REG  = r23
-	.def	TOGGLE_REG	= r25
+	.def	TOGGLE_REG	= r24
 
 	.equ	SERVO_RR	= 2600		;Refresh rate
 	.equ	SERVO_CW	= 10		;Clockwise
@@ -49,7 +49,6 @@ START:
 
 	call	WARM
 
-
 WAIT_FOR_COLOR:
 	rjmp	WAIT_FOR_COLOR
 
@@ -64,10 +63,7 @@ ISR_UPPER_TRIGGER:
 	push	r16
 	;
 
-	ldi		r16, HIGH(SERVO_CW)
-	out		OCR1BH, r16
-	ldi		r16, LOW(SERVO_CW)
-	out		OCR1BL, r16
+
 
 	//call	DELAY
 	
@@ -76,12 +72,15 @@ ISR_UPPER_TRIGGER:
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1BL, r16
 
+	sbrc	TOGGLE_REG, 2
+	rjmp	SKIP_INTERUPT_FIRST_SPIN
 	//SEND PULSE THAT SORTING IS COMPLETE
 	ldi		r16, 0
 	out		PORTB, r16 
 	call	DELAY
 	ldi		r16, 1
 	out		PORTB, r16
+
 SKIP_INTERUPT_FIRST_SPIN:
 	;pull all used
 	pop		r16
@@ -104,30 +103,38 @@ ISR_LOWER_TRIGGER:
 WARM_DRUM:
 	sbrs	TOGGLE_REG, 0
 	rjmp	FIRST_SPIN
+
 	clr		r16
 	out		TCNT0, r16
 	clr		TIMER0_REG
+
 	rjmp	ISR_LOWER_TRIGGER_END
 
 FIRST_SPIN:
 	sbrs	TOGGLE_REG, 1
 	rjmp	FIRST_SPIN_FIRST_TRIGGER
-	cbr		TOGGLE_REG, 2
+	cbr		TOGGLE_REG, 0b00000010
 	rjmp	ISR_LOWER_TRIGGER_END
 
 FIRST_SPIN_FIRST_TRIGGER:
-
+	sbrs	TOGGLE_REG, 2
+	rjmp	NORMAL_PROCEDURE
+		
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1AH, r16
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1AL, r16
-	//SKA DEN OCKSÅ LIGGA HÄR?????????
-	//ldi		r16, 0
-	//out		PORTB, r16 
-	//call	DELAY
-	//ldi		r16, 1
-	//out		PORTB, r16
+
+	//SEND PULSE FOR FIRST READ
+	ldi		r16, 0
+	out		PORTB, r16 
+	call	DELAY
+	ldi		r16, 1
+	out		PORTB, r16
+
+	cbr		TOGGLE_REG, 0b00000100
 	rjmp	ISR_LOWER_TRIGGER_END
+
 	
 
 NORMAL_PROCEDURE:
@@ -230,7 +237,7 @@ ISR_TIMER0_COMP:
 	
 	ldi		r16, (0<<CS02)|(0<<CS01)|(0<<CS00) //disable timer0
 	out		TCCR0, r16
-	cbr		TOGGLE_REG, 1
+	cbr		TOGGLE_REG, 0b00000001
 
 WRONG_POSITION:
 	
@@ -240,6 +247,8 @@ WRONG_POSITION:
 	pop		r16
 	reti
 ;----------------------------------------
+
+
 ADC_ISR:
 	in		r16, ADCL
 	in		r17, ADCH
@@ -408,6 +417,19 @@ TWI_SLAVE_INIT:
 //B = UPPER DISK
 
 WARM:
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1BH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1BL, r16
+
+	ldi		r16, HIGH(SERVO_ST)
+	out		OCR1AH, r16
+	ldi		r16, LOW(SERVO_ST)
+	out		OCR1AL, r16
+
+	call	MUSIC
+	
+
 	clr		TIMER0_REG
 	clr		r16
 	clr		r17
@@ -417,8 +439,9 @@ WARM:
 	sts		(POSU), r16
 	ldi		r16, NO_SKITTLE
 	sts		(COLOR_POS), r16
-	ldi		r16, 0x00 
+	ldi		r16, 0x01 
 	sts		(POSL), r16
+
 
 	ldi		r16, HIGH(SERVO_CCW)
 	out		OCR1BH, r16
@@ -432,6 +455,211 @@ WARM:
 
 	sbr		TOGGLE_REG, (1<<0)
 	sbr		TOGGLE_REG, (1<<1)
+	sbr		TOGGLE_REG, (1<<2)
 
 	sei
 	ret
+
+;--------------------------------------------
+
+
+
+//MUSIC
+
+
+	.equ	Ab0 = 255
+	.equ	A0	= 246
+	.equ	Bb0	= 230
+	.equ	B0	= 219
+	.equ	C1	= 208
+	.equ	Db1 = 196
+	.equ	D1	= 185
+	.equ	Eb1 = 174
+	.equ	E1	= 163
+	.equ	F1	= 154
+	.equ	Gb1 = 145
+	.equ	G1  = 138
+	.equ	Ab1 = 130
+	.equ	A1	= 123
+	.equ	Bb1 = 116
+	.equ	B1	= 109
+	.equ	C2	= 103
+	.equ	Db2 = 96
+	.equ	D2  = 91
+	.equ	Eb2	= 85
+	.equ	E2	= 80
+	.equ	F2	= 76
+	.equ	Gb2 = 72
+	.equ	G2	= 68
+	.equ	Ab2 = 63
+	.equ	A2	= 60
+	.equ	Bb2	= 57
+	.equ	B2  = 54
+	.equ	C3	= 50
+	.equ	Db3	= 47
+	.equ	D3	= 45
+	.equ	Eb3	= 42
+	.equ	E3	= 40
+
+	
+	.equ	L_Ab0	= 61
+	.equ	L_A0	= 65
+	.equ	L_Bb0	= 69
+	.equ	L_B0	= 73
+	.equ	L_C1	= 76
+	.equ	L_Db1	= 81
+	.equ	L_D1	= 85
+	.equ	L_Eb1	= 92
+	.equ	L_E1	= 98
+	.equ	L_F1	= 102
+	.equ	L_Gb1	= 110
+	.equ	L_G1	= 114
+	.equ	L_Ab1	= 122
+	.equ	L_A1	= 130
+	.equ	L_Bb1	= 137
+	.equ	L_B1	= 146
+	.equ	L_C2	= 153
+	.equ	L_Db2	= 163
+	.equ	L_D2	= 171
+	.equ	L_Eb2	= 183
+	.equ	L_E2	= 195
+	.equ	L_F2	= 203
+	.equ	L_Gb2	= 220
+	.equ	L_G2	= 229
+	.equ	L_Ab2	= 255
+	.equ	L_A2	= 255
+	.equ	L_Bb2	= 255
+	.equ	L_B2	= 255
+	.equ	L_C3	= 255
+	.equ	L_Db3	= 255
+	.equ	L_D3	= 255
+	.equ	L_Eb3	= 255
+	.equ	L_E3	= 255
+	
+		
+
+
+	.equ	PAUSELENGTH = 5
+
+	.def	NOTE_LENGTH_REG = r25
+
+
+
+
+
+	
+	
+
+MUSIC:
+	ldi		r21, (END - NOTES1)*2
+
+	ldi		ZH, HIGH(NOTE_LENGTH*2)
+	ldi		ZL, LOW(NOTE_LENGTH*2)
+	push	ZH
+	push	ZL
+
+	ldi		ZH, HIGH(NOTES1*2)
+	ldi		ZL, LOW(NOTES1*2)
+
+	call	SING
+
+	pop		ZL
+	pop		ZH
+
+	ret
+
+SING:
+	mov		r16, ZH
+	mov		r17, ZL
+	pop		r18
+	pop		r19
+	pop		ZL
+	pop		ZH
+	lpm		NOTE_LENGTH_REG, Z
+	lsr		NOTE_LENGTH_REG	//Gör till åttondelar
+	adiw	Z, 1
+	push	ZH
+	push	ZL
+	push	r19
+	push	r18
+	mov		ZH, r16
+	mov		ZL, r17
+
+	lpm		r16, Z
+	cpi		r16, 0
+	breq	PAUSE
+
+	call	WAVE
+SONGCONTINUE:
+	adiw	Z, 1
+	dec		r21
+	brne	SING
+	ret
+
+
+WAVE:
+	in		r16, PORTB
+	ori		r16, 0b00000010
+	out		PORTB, r16
+	call	WAVEDELAY
+	andi	r16, 0b11111101
+	out		PORTB, r16
+	call	WAVEDELAY
+
+	dec		NOTE_LENGTH_REG
+	cpi		NOTE_LENGTH_REG, 0
+	breq	WAVE_DONE	
+	rjmp	WAVE
+WAVE_DONE:
+	ret
+	
+WAVEDELAY:
+	push	r16
+	push	r17
+    ldi		r16, 25
+WL0: 
+	lpm		r17, Z
+WL1: 
+	dec		r17
+    brne	WL1
+    dec		r16
+    brne	WL0
+	pop		r17
+	pop		r16
+	ret
+
+
+PAUSE:
+
+    ldi  r18, PAUSELENGTH
+    ldi  r19, 75
+    ldi  r20, 191
+DL1: dec  r20
+    brne DL1
+    dec  r19
+    brne DL1
+    dec  r18
+    brne DL1
+    nop
+	rjmp	SONGCONTINUE
+
+
+;Zelda
+;	.db		L_G1, L_A1, L_B1, L_Db2, L_G1, L_A1, L_B1, L_Db2, L_Ab1, L_Bb1, L_C2, L_D2, L_Ab1, L_Bb1, L_C2, L_D2, L_A1, L_B1, L_Db2, L_Eb2, L_A1, L_B1, L_Db2, L_Eb2, L_Bb1, L_C2, L_D2, L_E2, L_Bb1, L_C2, L_D2, L_E2, L_B1, L_Db2, L_Eb2, L_F2, L_C2, L_D2, L_E2, L_Gb2, L_Db2, L_Eb2, L_F2, L_G2, L_D2, L_E2, L_Gb2, L_Ab2, L_A1, L_A1, L_Bb1, L_Bb1, L_B1, L_B1, L_C2, L_C2, L_C2, L_C2, L_C2, L_C2
+
+;	.db		 G1, A1, B1, Db2, G1, A1, B1, Db2, Ab1, Bb1, C2, D2, Ab1, Bb1, C2, D2, A1, B1, Db2, Eb2, A1, B1, Db2, Eb2, Bb1, C2, D2, E2, Bb1, C2, D2, E2, B1, Db2, Eb2, F2, C2, D2, E2, Gb2, Db2, Eb2, F2, G2, D2, E2, Gb2, Ab2, 0, 0, 0, 0, A1, Bb1, B1, C2, C2, C2, C2
+
+;Carousel:
+;	.db		L_C3, 0, L_B2, 0, L_Bb2, L_B2, L_Bb2, L_A2, L_Ab2, 0, L_G2, 0, L_Gb2, L_Gb2, L_G2, L_G2, L_A2, 0, L_Ab2, 0, L_G2, L_Ab2, L_G2, L_Gb2, L_F2, 0, L_E2, 0, L_Eb2, L_Eb2, L_E2, L_E2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_B1, L_C2, L_Db2, L_D2, L_Eb2, L_E2, L_F2, L_Gb2, L_G2, L_Ab2, L_A2, L_B2, L_A2, L_A2, L_G2, L_G2
+
+;	.db		C3, 0, B2, 0, Bb2, B2, Bb2, A2, Ab2, 0, G2, 0, Gb2, Gb2, G2, G2, A2, 0, Ab2, 0, G2, Ab2, G2, Gb2, F2, 0, E2, 0, Eb2, Eb2, E2, E2, G2, G2, F2, F2, Db2, Db2, D2, D2, G2, G2, F2, F2, Db2, Db2, D2, D2, B1, C2, Db2, D2, Eb2, E2, F2, Gb2, G2, Ab2, A2, B2, A2, A2, G2, G2
+
+NOTE_LENGTH:
+;	.db		L_G1, L_A1, L_B1, L_Db2, L_G1, L_A1, L_B1, L_Db2, L_Ab1, L_Bb1, L_C2, L_D2, L_Ab1, L_Bb1, L_C2, L_D2, L_A1, L_B1, L_Db2, L_Eb2, L_A1, L_B1, L_Db2, L_Eb2, L_Bb1, L_C2, L_D2, L_E2, L_Bb1, L_C2, L_D2, L_E2, L_B1, L_Db2, L_Eb2, L_F2, L_C2, L_D2, L_E2, L_Gb2, L_Db2, L_Eb2, L_F2, L_G2, L_D2, L_E2, L_Gb2, L_Ab2, L_A1, L_A1, L_Bb1, L_Bb1, L_B1, L_B1, L_C2, L_C2, L_C2, L_C2, L_C2, L_C2
+	.db		L_C3, 0, L_B2, 0, L_Bb2, L_B2, L_Bb2, L_A2, L_Ab2, 0, L_G2, 0, L_Gb2, L_Gb2, L_G2, L_G2, L_A2, 0, L_Ab2, 0, L_G2, L_Ab2, L_G2, L_Gb2, L_F2, 0, L_E2, 0, L_Eb2, L_Eb2, L_E2, L_E2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_B1, L_C2, L_Db2, L_D2, L_Eb2, L_E2, L_F2, L_Gb2, L_G2, L_Ab2, L_A2, L_B2, L_A2, L_A2, L_G2, L_G2
+
+NOTES1:
+;	.db		 G1, A1, B1, Db2, G1, A1, B1, Db2, Ab1, Bb1, C2, D2, Ab1, Bb1, C2, D2, A1, B1, Db2, Eb2, A1, B1, Db2, Eb2, Bb1, C2, D2, E2, Bb1, C2, D2, E2, B1, Db2, Eb2, F2, C2, D2, E2, Gb2, Db2, Eb2, F2, G2, D2, E2, Gb2, Ab2, 0, 0, 0, 0, A1, Bb1, B1, C2, C2, C2, C2
+	.db		C3, 0, B2, 0, Bb2, B2, Bb2, A2, Ab2, 0, G2, 0, Gb2, Gb2, G2, G2, A2, 0, Ab2, 0, G2, Ab2, G2, Gb2, F2, 0, E2, 0, Eb2, Eb2, E2, E2, G2, G2, F2, F2, Db2, Db2, D2, D2, G2, G2, F2, F2, Db2, Db2, D2, D2, B1, C2, Db2, D2, Eb2, E2, F2, Gb2, G2, Ab2, A2, B2, A2, A2, G2, G2
+
+END:
