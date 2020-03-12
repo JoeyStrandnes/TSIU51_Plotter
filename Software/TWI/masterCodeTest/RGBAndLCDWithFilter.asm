@@ -27,8 +27,8 @@
 //////// RGB-SENSOR USER CONFIG ////////////////////////////////////////
 .equ ATIME_VALUE = 0xD0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
 .equ GAIN_VALUE  = 0x00 //00=1X, 01=4X, 10=16X, 11=60X
-.equ PRECISION   = 64  //GIVES OUR NORMALIZE_RGB_DATA A PRECISION (2^N = PRECISION)
-.equ PRECISION_EXP = 6  //log2(PRECISION) = N
+.equ PRECISION   = 64  //SCALES UP OUR REFERENCE-CLEARVALUES. SHOULD BE AS CLOSE TO 16 BIT WITHOUT OVERFLOWING
+.equ PRECISION_EXP = 6  // EXPONENT OF PRECISION IN BASE 2
 //////// TWI USER CONFIG ////////////////////////////////////////
 .equ TWI_BITRATE = 32  //100kHz
 .equ TWI_PRESCALAR = 0 //100kHz
@@ -100,7 +100,7 @@ PURPLE_N:
 	.byte 1
 
 	.cseg
-//////// Reset/Interupt Vectors ////////////////////////////////////////
+//////// RESET/INTERRUPT VECTORS ////////////////////////////////////////
 	.org 0
 	jmp BOOT
 	.org INT0ADDR
@@ -172,9 +172,9 @@ DONE:
 
 
 ///////////////////////////////////////////////////////////////////
-// REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xE6 WITH CLIP
+// REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xD0
 // CLEAR-VALUE*PRECISION MUST BE WITHIN 16bit
-RED://FEL
+RED:
 	.equ RED_CLEAR = 649
 	.equ RED_RED = 245
 	.equ RED_GREEN = 210
@@ -298,14 +298,6 @@ GET_COLOR_DIFFERENCE:
 	pop r16 //POP RGBDATAL
 	ret
 ///////////////////////////////////////////////////////////////////
-/*
-SPARAR NORMALISERADE FÄRGVÄRDET SOM SKA JÄMFÖRAS FÖR ALLA 5 FÄRGER I RBGDATAH:L
-T.ex. (RED_SKITTLE_REF_CLR/MÄT_CLR) vilket ger ett bråk på formen X/2^N där N är antalet LSL på REF-CLR.
-Detta bråket, t.ex. 60/64, ska då gångras med RDATAL:H, GDATAL:H, BDATAL:H. Utför 60*RGBDATA och sen LSR N(6 ggr i detta fallet) på produkten.
-EV ignorera N (6) undre bitarna????
-LSL PÅ REF-CLR VÄRDET BÖR KUNNAS SKAPAS MED PREPROCESSORN...
-REF_RGB = (REF_CLR/MÄT_CLR) * MÄTRGB 
-*/
 NORMALIZE_RGB_DATA:
 	push ZH
 	push ZL
@@ -320,28 +312,29 @@ NORMALIZE_RGB_DATA:
 	push r22
 	push r23
 
-	lpm r16, Z+ // LOADS THE SCALED UP REFERENCE CLEAR-VALUE FROM THE LOOKUPTABLE INTO DIVIDEND
-	lpm r17, Z  // LOADS THE SCALED UP REFERENCE CLEAR-VALUE FROM THE LOOKUPTABLE INTO DIVIDEND
+	lpm r16, Z+ //LOADS THE SCALED UP REFERENCE CLEAR-VALUE FROM THE LOOKUPTABLE INTO DIVIDEND
+	lpm r17, Z  //LOADS THE SCALED UP REFERENCE CLEAR-VALUE FROM THE LOOKUPTABLE INTO DIVIDEND
 	lds r18, CDATAL  //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
 	lds r19, CDATAH  //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
-	call div16u //USES 14,15,16,17 RESULT IN R17:R16. REMAINDER IN R15:R14
+	call div16u //RESULT IN R17:R16. REMAINDER IN R15:R14
 	
 	////// QUOTIENT ///////
-	//RESULT FROM DIVISION IS IN MULTIPLIER
-	ldd r18, Y+0 // LOAD RGBDATAL INTO MULTIPLIER
-	ldd r19, Y+1 // LOAD RGBDATAH INTO MULTIPLIER
-	call mpy16u  //USES r18,r19,r20,r21.  WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
+	//RESULT FROM DIVISION IS IN FIRST MULTIPLIER
+	ldd r18, Y+0 //LOAD RGBDATAL INTO SECOND MULTIPLIER
+	ldd r19, Y+1 //LOAD RGBDATAH INTO SECOND MULTIPLIER
 	
+	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
 	call DIVIDE_BY_PRECISION  //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
-	mov r22, r18 // SAVE OUR QUOTIENT 
-	mov r23, r19 // SAVE OUR QUOTIENT
+	mov r22, r18 //SAVE OUR QUOTIENT 
+	mov r23, r19 //SAVE OUR QUOTIENT
 
 	////// REMAINDER ///////
 	mov r16, r14 //MOVES REMAINDER INTO MULTIPLIER
 	mov r17, r15 //MOVES REMAINDER INTO MULTIPLIER
-	ldd r18, Y+0 // LOAD RGBDATAL INTO MULTIPLIER
-	ldd r19, Y+1 // LOAD RGBDATAH INTO MULTIPLIER
-	call mpy16u  //USES r18,r19,r20,r21.  WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
+	ldd r18, Y+0 //LOAD RGBDATAL INTO MULTIPLIER
+	ldd r19, Y+1 //LOAD RGBDATAH INTO MULTIPLIER
+	
+	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
 	call DIVIDE_BY_PRECISION //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
 	
 	mov r16, r18 //MOVES OUR ANSWER INTO DIVIDEND
@@ -382,7 +375,7 @@ ROTATE_AGAIN:
 	ror r19
 	ror r18
 
-	adc r18, r23 //ROUND UP IN ALL DIVISIONS
+	adc r18, r23 //ROUND UP
 	adc r19, r23
 	adc r20, r23
 	adc r21, r23
@@ -948,176 +941,48 @@ LCD_WAIT_IF_BUSY:
 	rjmp LCD_WAIT_IF_BUSY
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-;***************************************************************************
-;*
-;* "mpy16u" - 16x16 Bit Unsigned Multiplication
-;*
-;* This subroutine multiplies the two 16-bit register variables 
-;* mp16uH:mp16uL and mc16uH:mc16uL.
-;* The result is placed in m16u3:m16u2:m16u1:m16u0.
-;*  
-;* Number of words	:105 + return
-;* Number of cycles	:105 + return
-;* Low registers used	:None
-;* High registers used  :6 (mp16uL,mp16uH,mc16uL/m16u0,mc16uH/m16u1,m16u2,
-;*			    m16u3)	
-;*
-;***************************************************************************
+MULTI16: //MULTI1 IN R17:R16, MULTI2 IN R19:R18
+	//RESULT IN R21:R20:R19:R18
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r22
 
-;***** Subroutine Register Variables
+	clr r22 //ZERO
+	mul r17, r19 //MSB1*MSB2
+	mov r4, r0
+	mov r5, r1
 
+	mul r16, r18 //LSB1*LSB2
+	mov r2, r0
+	mov r3, r1
 
+	mul r17, r18 //MSB1*LSB2
+	add r3, r0
+	adc r4, r1
+	adc r5, r22 
 
-.def	mc16uL	=r16		;multiplicand low byte
-.def	mc16uH	=r17		;multiplicand high byte
-.def	mp16uL	=r18		;multiplier low byte
-.def	mp16uH	=r19		;multiplier high byte
-.def	m16u0	=r18		;result byte 0 (LSB)
-.def	m16u1	=r19		;result byte 1
-.def	m16u2	=r20		;result byte 2
-.def	m16u3	=r21		;result byte 3 (MSB)
+	mul r16, r19 //LSB1*MSB2
+	add r3, r0
+	adc r4, r1
+	adc r5, r22 
 
-;***** Code
-
-mpy16u: push r16
-	push r17
-
-	clr	m16u3		;clear 2 highest bytes of result
-	clr	m16u2	
-	lsr	mp16uH		;rotate multiplier Low
-	ror	mp16uL		;rotate multiplier High
-
-	brcc	noadd0		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd0:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd1		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd1:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd2		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd2:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd3		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd3:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd4		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd4:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd5		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd5:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd6		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd6:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd7		;if carry sett
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd7:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd8		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd8:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd9		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd9:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad10		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad10:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad11		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad11:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad12		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad12:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad13		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad13:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad14		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad14:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad15		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad15:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	pop r17
-	pop r16
+	mov r18, r2
+	mov r19, r3
+	mov r20, r4
+	mov r21, r5
+	pop r22
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
 	ret
+
 ;***************************************************************************
 ;*
 ;* "div16u" - 16/16 Bit Unsigned Division
@@ -1368,7 +1233,7 @@ d16u_32:rol	dd16uL		;shift left dividend
 	ret
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-.org 0x1900 //CLEAR VALUES ARE SCALED UP TO THE PRECISION-CONSTANT
+.org 0x1900 //CLEAR VALUES ARE SCALED UP WITH THE PRECISION-CONSTANT
 REF_VALUES:
 	.db LOW(RED_CLEAR*PRECISION),    HIGH(RED_CLEAR*PRECISION),    LOW(RED_RED),    HIGH(RED_RED),    LOW(RED_GREEN),    HIGH(RED_GREEN),    LOW(RED_BLUE),    HIGH(RED_BLUE)
 	.db LOW(GREEN_CLEAR*PRECISION),  HIGH(GREEN_CLEAR*PRECISION),  LOW(GREEN_RED),  HIGH(GREEN_RED),  LOW(GREEN_GREEN),  HIGH(GREEN_GREEN),  LOW(GREEN_BLUE),  HIGH(GREEN_BLUE)
