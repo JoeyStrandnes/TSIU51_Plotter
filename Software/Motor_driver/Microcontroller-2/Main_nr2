@@ -34,9 +34,9 @@ COLOR_POS:
 
 	.equ	SERVO_RR	= 2600		;Refresh rate
 	.equ	SERVO_CW	= 10		;Clockwise
-	.equ	SERVO_CCW	= 255		;Counter clockwise
-	.equ	SERVO_ST	= 192		;Stop
-	.equ	NO_SKITTLE	= 10
+	.equ	SERVO_CCW	= 200		;Counter clockwise
+	.equ	SERVO_ST	= 193		;Stop
+	.equ	NO_SKITTLE	= 5
 
 	;---code
 START:
@@ -427,7 +427,7 @@ WARM:
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1AL, r16
 
-	call	MUSIC
+	//call	MUSIC
 	
 
 	clr		TIMER0_REG
