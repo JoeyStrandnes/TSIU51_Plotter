@@ -25,12 +25,20 @@
 .equ RGB_COMMAND_BIT = 0x80
 .equ RGB_AUTO_INC_BIT = 0b00100000
 //////// RGB-SENSOR USER CONFIG ////////////////////////////////////////
-.equ ATIME_VALUE = 0xD0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.4 ms 
+.equ ATIME_VALUE = 0xD0 // NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1 -ATIME_VALUE) WITH EACH CYCLE TAKING 2.5 ms 
 .equ GAIN_VALUE  = 0x00 //00=1X, 01=4X, 10=16X, 11=60X
-.equ PRECISION   = 64  //GIVES OUR NORMALIZE_RGB_DATA A PRECISION (2^N = PRECISION)
-.equ PRECISION_EXP = 6  //log2(PRECISION) = N
+.equ PRECISION   = 64  //SCALES UP OUR REFERENCE-CLEARVALUES. CLEARDATA*PRECISION SHOULD BE AS CLOSE TO 16 BIT WITHOUT OVERFLOWING
+.equ PRECISION_EXP = 6  // EXPONENT OF PRECISION IN BASE 2
+//////// COLOR ALIAS ////////////////////////////////////////////
+.equ NUMBER_OF_COLORS = 5 //5 or 6, depends on if we want NO_SKITTLE
+.equ RED_SKITTLE    = 0
+.equ GREEN_SKITTLE  = 1
+.equ ORANGE_SKITTLE = 2
+.equ YELLOW_SKITTLE = 3
+.equ PURPLE_SKITTLE = 4
+.equ NO_SKITTLE     = 5
 //////// TWI USER CONFIG ////////////////////////////////////////
-.equ TWI_BITRATE = 32  //100kHz
+.equ TWI_BITRATE   = 32  //100kHz
 .equ TWI_PRESCALAR = 0 //100kHz
 //////// TWI SLAVE ADDR ////////////////////////////////////////
 .equ RGB_SLAVE_ADDR = 0x29
@@ -59,7 +67,7 @@
 //////// MEMORY LAYOUT ////////////////////////////////////////
 	.dseg
 	.org 0x0060 //SRAM_START
-//////// LATEST RGB-VALUES 
+//////// LATEST CRGB-VALUES ////////////////////////////////////////
 CDATAL:	.byte 1
 CDATAH:	.byte 1
 RDATAL:	.byte 1
@@ -68,23 +76,22 @@ GDATAL:	.byte 1
 GDATAH:	.byte 1
 BDATAL:	.byte 1
 BDATAH:	.byte 1
-//////// CURRENT SLAVE ////////////////////////////////////////
-CURRENT_SLAVE:
-	.byte 1
+
 //////// LATEST COLOR_DIFFERENCES ////////////////////////////////////////
 RED_DIFF:
-	.byte 1
+	.byte 2
 GREEN_DIFF:
-	.byte 1
+	.byte 2
 ORANGE_DIFF:
-	.byte 1
+	.byte 2
 YELLOW_DIFF:
-	.byte 1
+	.byte 2
 PURPLE_DIFF:
-	.byte 1
-
+	.byte 2
+NO_SKITTLE_DIFF:
+	.byte 2
 //////// COLOR OF LATEST SKITTLE SORTED ////////////////////////////////////////
-// 0 = RED, 1 = GREEN, 2 = ORANGE, 3 = YELLOW, 4 = PURPLE, 10 = NO_SKITTLE?
+// 0 = RED, 1 = GREEN, 2 = ORANGE, 3 = YELLOW, 4 = PURPLE, 5 = NO_SKITTLE
 LATEST_SKITTLE_COLOR:
 	.byte 1
 //////// NUMBER OF SKITTLES SORTED ////////////////////////////////////////
@@ -98,9 +105,13 @@ YELLOW_N:
 	.byte 1
 PURPLE_N:
 	.byte 1
-
+NO_SKITTLE_N:
+	.byte 1
+//////// CURRENT TWI SLAVE ////////////////////////////////////////
+CURRENT_SLAVE:
+	.byte 1
 	.cseg
-//////// Reset/Interupt Vectors ////////////////////////////////////////
+//////// RESET/INTERRUPT VECTORS ////////////////////////////////////////
 	.org 0
 	jmp BOOT
 	.org INT0ADDR
@@ -117,109 +128,129 @@ BOOT:
 
 	ldi YH,HIGH(SRAM_START)
 	ldi YL,LOW(SRAM_START) 
-	ldi r16, 20
-	call INIT_CLEAR_SRAM // puts zeroes in N bytes
-	call TWI_INIT
+	ldi r16, 28 //NUMBER OF BYTES IN SRAM
+	call INIT_CLEAR_SRAM // puts zeroes in N bytes from Y
+/*	call TWI_INIT
 	call RGB_INIT //Current slave is now the RGB-sensor
 	call INT0_INIT
 	call LCD_INIT
 	call UPDATE_DISPLAY
 	sei 
-
+*/
 	jmp MAIN
 
 ///////////////////////////////////////////////////////////////////
 
 MAIN:	
-/*	TEST-VÄRDEN
-	ldi r16, LOW(521)
+//TESTVÄRDEN FÖR SIMULATOR
+/*
+	ldi r16, LOW(813+81)
 	sts CDATAL, r16
-	ldi r16, HIGH(521)
+	ldi r16, HIGH(813+81)
 	sts CDATAH, r16
 
-	ldi r16, LOW(290)
+	ldi r16, LOW(295+29)
 	sts RDATAL, r16
-	ldi r16, HIGH(290)
+	ldi r16, HIGH(295+29)
 	sts RDATAH, r16
 
-	ldi r16, LOW(266)
+	ldi r16, LOW(273+27)
 	sts GDATAL, r16
-	ldi r16, HIGH(266)
+	ldi r16, HIGH(273+27)
 	sts GDATAH, r16
 
-	ldi r16, LOW(253)
+	ldi r16, LOW(220+22)
 	sts BDATAL, r16
-	ldi r16, HIGH(253)
+	ldi r16, HIGH(220+22)
 	sts BDATAH, r16
 */
 DONE:
-/*
-	call RGB_DELAY_INTEGRATION
-	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
+
+//	call RGB_DELAY_INTEGRATION
+//	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
 	call COMPARE
 	call COLOR_MATCH
-	call UPDATE_NUMBER_OF_SKITTLES
-	call UPDATE_DISPLAY
+//	call UPDATE_NUMBER_OF_SKITTLES
+//	call UPDATE_DISPLAY
 	//call SEND_SKITTLE_COLOR_TO_SLAVE
 
 	ldi YH,HIGH(RED_DIFF)
 	ldi YL,LOW(RED_DIFF) 
-	ldi r16, 5
-	call INIT_CLEAR_SRAM 
-*/
+	ldi r16, 2*NUMBER_OF_COLORS
+	call INIT_CLEAR_SRAM //CLEAR LATEST DIFFERENCES
+
+
 	rjmp DONE
 
 
 
 ///////////////////////////////////////////////////////////////////
-// REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xE6 WITH CLIP
-// CLEAR-VALUE*PRECISION MUST BE WITHIN 16bit
-RED://FEL
-	.equ RED_CLEAR = 649
-	.equ RED_RED = 245
-	.equ RED_GREEN = 210
-	.equ RED_BLUE = 186
+// REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xD0
+// ALL CLEAR-VALUE*PRECISION MUST BE WITHIN 16bit
+RED:
+	.equ RED_CLEAR = 680//609//675
+	.equ RED_RED = 240//210//227
+	.equ RED_GREEN = 220//195//219
+	.equ RED_BLUE = 200//178//199
 
 GREEN:
-	.equ GREEN_CLEAR = 681
-	.equ GREEN_RED = 237
-	.equ GREEN_GREEN = 237
-	.equ GREEN_BLUE = 195
+	.equ GREEN_CLEAR = 676//617//717
+	.equ GREEN_RED = 212//192//221
+	.equ GREEN_GREEN = 236//216//252
+	.equ GREEN_BLUE = 198//180//210
 
 ORANGE:
-	.equ ORANGE_CLEAR = 697
-	.equ ORANGE_RED = 271
-	.equ ORANGE_GREEN = 223
-	.equ ORANGE_BLUE = 194
+	.equ ORANGE_CLEAR = 699//670//750
+	.equ ORANGE_RED = 254//255//271
+	.equ ORANGE_GREEN = 221//207//238
+	.equ ORANGE_BLUE = 196//182//211
 
 YELLOW:
-	.equ YELLOW_CLEAR = 773
-	.equ YELLOW_RED = 295
-	.equ YELLOW_GREEN = 260
-	.equ YELLOW_BLUE = 211
+	.equ YELLOW_CLEAR = 813//702//842
+	.equ YELLOW_RED = 295//250//299
+	.equ YELLOW_GREEN = 273//235//283
+	.equ YELLOW_BLUE = 220//191//230
 
 PURPLE:
-	.equ PURPLE_CLEAR = 640
-	.equ PURPLE_RED = 228
-	.equ PURPLE_GREEN = 212
-	.equ PURPLE_BLUE = 188
+	.equ PURPLE_CLEAR = 643//587//670
+	.equ PURPLE_RED = 208//192//211
+	.equ PURPLE_GREEN = 211//191//222
+	.equ PURPLE_BLUE = 194//176//203
+
+NOTHING:
+	.equ NO_SKITTLE_CLEAR = 604//553//636
+	.equ NO_SKITTLE_RED = 190//175//195
+	.equ NO_SKITTLE_GREEN = 201//183//211
+	.equ NO_SKITTLE_BLUE = 181//164//192
 
 ///////////////////////////////////////////////////////////////////
-//I den färdiga produkten ska denna interupten triggas på att trumman är tillbaka i utgångsläge från 
-// MC-Slaven på något sätt. Då ska den göra följande:
-// 1. Vänta en hel RGB-cykel för att få rätt färgdata. Skittlen trillar ju inte ner framför sensorn förrän trumman är tillbaka
-// 2. Läsa av färg-data på Skittlen.
-// 3. Konvertera det till en av de 5 olika färgerna eller en felkod för: "ingen skittle framför sensorn" 
-// 4. Uppdatera skärmen med nya antalet Skittles - Eventuellt vänta med uppdateringen till nästa gång trumman är tillbaka.
-// Det ger uppräkning efter att Skittlen trillat ner i sin ränna. Då ska detta steget utföras först.
-// 5. Skicka vilken färg på Skittle till MC-Slaven för sortering.
 ISR_INT0:
 	push r16
 	in r16, SREG
 	push r16
 
 	call RGB_DELAY_INTEGRATION
-	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION
+	//TODO: ADD DUMMY READ?
+	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM 
 	call COMPARE
 	call COLOR_MATCH
 	call UPDATE_NUMBER_OF_SKITTLES
@@ -228,7 +259,7 @@ ISR_INT0:
 
 	ldi YH,HIGH(RED_DIFF)
 	ldi YL,LOW(RED_DIFF) 
-	ldi r16, 5
+	ldi r16, 2*NUMBER_OF_COLORS
 	call INIT_CLEAR_SRAM 
 
 	pop r16
@@ -250,8 +281,13 @@ COMPARE:
 	ldi XH, HIGH(RED_DIFF)
 	ldi XL, LOW(RED_DIFF)
 
-	ldi r16, 5 //LOOP COUNTER: NUMBER OF DIFFERENT COLORS
+	ldi r16, NUMBER_OF_COLORS //LOOP COUNTER
 COMPUTE_NEXT_SKITTLE_DIFFERENCE:
+
+	ldi YH, HIGH(CDATAL)
+	ldi YL, LOW(CDATAL)
+	call COMPUTE_REFERENCE_DIFFERENCE
+	call SCALE_DOWN_DIFFERENCE //SCALES DOWN CLEAR VALUE DIFFERENCE ONLY
 
 	ldi YH, HIGH(RDATAL)
 	ldi YL, LOW(RDATAL)
@@ -265,7 +301,7 @@ COMPUTE_NEXT_SKITTLE_DIFFERENCE:
 	ldi YL, LOW(BDATAL)
 	call GET_COLOR_DIFFERENCE
 
-	adiw XH:XL, 1 //RED_DIFF -> GREEN_DIFF ...
+	adiw XH:XL, 2 //RED_DIFF -> GREEN_DIFF ...
 	adiw ZH:ZL, 8 //RED REFERENCE CLEAR-VALUE -> GREEN REFERENCE CLEAR-VALUE ...
 	
 	dec r16
@@ -280,6 +316,32 @@ COMPUTE_NEXT_SKITTLE_DIFFERENCE:
 	pop XH
 	ret
 ///////////////////////////////////////////////////////////////////
+SCALE_DOWN_DIFFERENCE:
+	push XH
+	push XL
+	push r16
+	push r17
+	push r18
+
+	ld r16, X+
+	ld r17, X+
+	ldi r18, 3 //DIV BY 2^r18
+SCALE_DOWN_DIFFERNCE_LOOP:
+	clc
+	ror r17
+	ror r16
+	dec r18
+	brne SCALE_DOWN_DIFFERNCE_LOOP
+	st -X, r17
+	st -X, r16
+
+	pop r18
+	pop r17
+	pop r16
+	pop XL
+	pop XH
+	ret
+///////////////////////////////////////////////////////////////////
 GET_COLOR_DIFFERENCE:
 	push r16
 	ldd r16, Y+0 
@@ -287,25 +349,16 @@ GET_COLOR_DIFFERENCE:
 	ldd r16, Y+1 
 	push r16 //PUSH RGBDATAH
 
-	call NORMALIZE_RGB_DATA //ANVÄNDER Z OCH Y, ÄNDRAR DOM INTE!
-	call COMPUTE_REF_DIFF   //ANVÄNDER Z OCH Y, ÄNDRAR DOM INTE!
-	call SAVE_DIFFERENCE	//ANVÄNDER X, ÄNDRAR DEN INTE!
+	call NORMALIZE_RGB_DATA //ANVÄNDER Y OCH Z. ÄNDRAR DOM INTE!
+	call COMPUTE_REFERENCE_DIFFERENCE //ANVÄNDER X, Y, Z. ÄNDRAR DOM INTE!
 
-	pop r16
-	std Y+1, r16 
 	pop r16 //POP RGBDATAH
-	std Y+0, r16 
+	std Y+1, r16 
 	pop r16 //POP RGBDATAL
+	std Y+0, r16 
+	pop r16 
 	ret
 ///////////////////////////////////////////////////////////////////
-/*
-SPARAR NORMALISERADE FÄRGVÄRDET SOM SKA JÄMFÖRAS FÖR ALLA 5 FÄRGER I RBGDATAH:L
-T.ex. (RED_SKITTLE_REF_CLR/MÄT_CLR) vilket ger ett bråk på formen X/2^N där N är antalet LSL på REF-CLR.
-Detta bråket, t.ex. 60/64, ska då gångras med RDATAL:H, GDATAL:H, BDATAL:H. Utför 60*RGBDATA och sen LSR N(6 ggr i detta fallet) på produkten.
-EV ignorera N (6) undre bitarna????
-LSL PÅ REF-CLR VÄRDET BÖR KUNNAS SKAPAS MED PREPROCESSORN...
-REF_RGB = (REF_CLR/MÄT_CLR) * MÄTRGB 
-*/
 NORMALIZE_RGB_DATA:
 	push ZH
 	push ZL
@@ -320,40 +373,49 @@ NORMALIZE_RGB_DATA:
 	push r22
 	push r23
 
-	lpm r16, Z+ // LOADS THE SCALED UP REFERENCE CLEAR-VALUE FROM THE LOOKUPTABLE INTO DIVIDEND
-	lpm r17, Z  // LOADS THE SCALED UP REFERENCE CLEAR-VALUE FROM THE LOOKUPTABLE INTO DIVIDEND
+	lpm r16, Z+ //LOAD CLEAR VALUE FROM LOOKUP TABLE INTO FIRST MULTIPLIER
+	lpm r17, Z  //LOAD CLEAR VALUE FROM LOOKUP TABLE INTO FIRST MULTIPLIER	
+	ldi r18, LOW(PRECISION) //LOAD PRECISION CONSTANT INTO SECOND MULTIPLIER
+	ldi r19, HIGH(PRECISION)//LOAD PRECISION CONSTANT INTO SECOND MULTIPLIER
+	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
+
+	mov r16, r18 //MOVE SCALED UP CLEAR VALUE INTO DIVIDEND
+	mov r17, r19 //MOVE SCALED UP CLEAR VALUE INTO DIVIDEND
 	lds r18, CDATAL  //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
 	lds r19, CDATAH  //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
-	call div16u //USES 14,15,16,17 RESULT IN R17:R16. REMAINDER IN R15:R14
+	call div16u //RESULT IN R17:R16. REMAINDER IN R15:R14
 	
 	////// QUOTIENT ///////
-	//RESULT FROM DIVISION IS IN MULTIPLIER
-	ldd r18, Y+0 // LOAD RGBDATAL INTO MULTIPLIER
-	ldd r19, Y+1 // LOAD RGBDATAH INTO MULTIPLIER
-	call mpy16u  //USES r18,r19,r20,r21.  WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
+	//RESULT FROM DIVISION IS IN FIRST MULTIPLIER
+	ldd r18, Y+0 //LOAD RGBDATAL INTO SECOND MULTIPLIER
+	ldd r19, Y+1 //LOAD RGBDATAH INTO SECOND MULTIPLIER
 	
+	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
 	call DIVIDE_BY_PRECISION  //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
-	mov r22, r18 // SAVE OUR QUOTIENT 
-	mov r23, r19 // SAVE OUR QUOTIENT
+	//TODO: CHECK IF WITHIN 16BIT
+	mov r22, r18 //SAVE QUOTIENT 
+	mov r23, r19 //SAVE QUOTIENT
 
 	////// REMAINDER ///////
 	mov r16, r14 //MOVES REMAINDER INTO MULTIPLIER
 	mov r17, r15 //MOVES REMAINDER INTO MULTIPLIER
-	ldd r18, Y+0 // LOAD RGBDATAL INTO MULTIPLIER
-	ldd r19, Y+1 // LOAD RGBDATAH INTO MULTIPLIER
-	call mpy16u  //USES r18,r19,r20,r21.  WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
-	call DIVIDE_BY_PRECISION //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
+	ldd r18, Y+0 //LOAD RGBDATAL INTO MULTIPLIER
+	ldd r19, Y+1 //LOAD RGBDATAH INTO MULTIPLIER
 	
-	mov r16, r18 //MOVES OUR ANSWER INTO DIVIDEND
-	mov r17, r19 //MOVES OUR ANSWER INTO DIVIDEND
+	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
+	call DIVIDE_BY_PRECISION //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
+	//TODO: CHECK IF WITHIN 16BIT
+
+	mov r16, r18 //MOVES RESULT INTO DIVIDEND
+	mov r17, r19 //MOVES RESULT INTO DIVIDEND
 	lds r18, CDATAL //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
 	lds r19, CDATAH //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
-	call div16u  //USES 14,15,16,17 RESULT IN R17:R16. REMAINDER IN R15:R14
+	call div16u  //RESULT IN R17:R16. REMAINDER IN R15:R14
 	
-	add r22, r16 //ADD REMAINDER TO OUR QUOTIENT
-	adc r23, r17 //ADD REMAINDER TO OUR QUOTIENT
-	std Y+0, r22 //STORES THE NORMALIZED VALUE BACK INTO RGBDATAL
-	std Y+1, r23 //STORES THE NORMALIZED VALUE BACK INTO RGBDATAH
+	add r22, r16 //ADD RESULT TO OUR QUOTIENT
+	adc r23, r17 //ADD RESULT TO OUR QUOTIENT
+	std Y+0, r22 //STORES THE NORMALIZED RGBDATA BACK INTO SRAM
+	std Y+1, r23 //STORES THE NORMALIZED RGBDATA BACK INTO SRAM
 
 	pop r23
 	pop r22
@@ -382,7 +444,7 @@ ROTATE_AGAIN:
 	ror r19
 	ror r18
 
-	adc r18, r23 //ROUND UP IN ALL DIVISIONS
+	adc r18, r23 //ROUND UP
 	adc r19, r23
 	adc r20, r23
 	adc r21, r23
@@ -394,21 +456,24 @@ ROTATE_AGAIN:
 	ret
 
 ///////////////////////////////////////////////////////////////////
-//LEAVES THE ABSOLUTE DIFFERENCE OF MEASURED VALUE AND THE REFERENCE IN R25:R24 FOR SAVE_DIFFERENCE TO USE
-COMPUTE_REF_DIFF:	
+COMPUTE_REFERENCE_DIFFERENCE:	
+	push XH
+	push XL
 	push ZH
 	push ZL
 	push r16
 	push r17
-
+	push r24
+	push r25
+	//ADD OFFSET TO Z
 	ldi r16, LOW(CDATAL)
 	ldi r17, HIGH(CDATAL)
 	mov r24, YL
 	mov r25, YH
 	sub r24, r16
 	sbc r25, r17
-	add ZL, r24 //ADD OFFSET TO Z
-	adc ZH, r25 //ADD OFFSET TO Z
+	add ZL, r24 
+	adc ZH, r25 
 
 	lpm r16, Z+ //LOW BYTE OF REFERENCE-VALUE
 	lpm r17, Z  //HIGH BYTE OF REFERENCE-VALUE
@@ -417,72 +482,83 @@ COMPUTE_REF_DIFF:
 
 	sub r24, r16 //COMPUTE DIFFERENCE
 	sbc r25, r17 //COMPUTE DIFFERENCE
-	brcc NO_UNDERFLOW
-	neg r24
-	com r25
-NO_UNDERFLOW:
-
-	pop r17
-	pop r16
-	pop ZL
-	pop ZH
-	ret
-///////////////////////////////////////////////////////////////////
-//FROM COMPUTE_REF_DIFF THE ABSOLUTE VALUE OF THE DIFFERENCE IS IN R25:R24
+	brcc SAVE_DIFFERENCE
+	neg r24	//GET ABSOLUTE VALUE OF DIFFERENCE IF NEGATIVE
+	com r25 //GET ABSOLUTE VALUE OF DIFFERENCE IF NEGATIVE
 SAVE_DIFFERENCE:
-	push r16
-	ld r16, X // GET PREVIOUS VALUE IN SRAM
-	cpi r25, 0 //DIFF BIGGER THAN 255 ??
-	brne BOGUS_VALUE
-	add r16, r24
-	brcs BOGUS_VALUE
-	jmp SAVE_DIFFERENCE_DONE
-BOGUS_VALUE:
-	ldi r16, 0xFF
 
-SAVE_DIFFERENCE_DONE:
-	st X, r16
-	pop r16
-	ret
-///////////////////////////////////////////////////////////////////
-COLOR_MATCH:
-	push XH
-	push XL
-	push ZH
-	push ZL
-	push r16
-	push r17
-	push r18
+	ld r16, X+ // GET PREVIOUS VALUE IN SRAM
+	ld r17, X+ // GET PREVIOUS VALUE IN SRAM
 
-	ldi XH, HIGH(RED_DIFF) //X PEKAR PÅ MINSTA VÄRDET
-	ldi XL, LOW(RED_DIFF)
-	ldi YH, HIGH(GREEN_DIFF)
-	ldi YL, LOW(GREEN_DIFF)
-	ldi r18, 4 //LOOP COUNTER: 5-1
-COLOR_MATCH_NEXT_SKITTLE:
-	ld r16, X
-	ld r17, Y
-	// X < Y ?
-	cp r16, r17
-	brmi X_POINTER_STAYS //VARFÖR BEHÖVS BÅDA?
-	brlo X_POINTER_STAYS //VARFÖR BEHÖVS BÅDA?
-	mov XH, YH
-	mov XL, YL
-X_POINTER_STAYS:
-	adiw YH:YL, 1
-	dec r18
-	brne COLOR_MATCH_NEXT_SKITTLE
-	//TODO: FELKONTROLL - OM DET MINSTA TALET (SOM X PEKAR PÅ) HAR EN DIFF PÅ MER ÄN 100(?) SÅ Spara NO_SKITTLE/BAD_READING?
-	subi XL, LOW(RED_DIFF) // GET OFFSET FOR COLOR 
-	sts LATEST_SKITTLE_COLOR, XL
+	add r16, r24 //ADD TO PREVIOUS DIFFERENCE
+	adc r17, r25 //ADD TO PREVIOUS DIFFERENCE
+	brcc DIFFERENCE_OK
+	ldi r16, 0xFF //SET DIFF TO MAX
+	ldi r17, 0xFF //SET DIFF TO MAX
+DIFFERENCE_OK:
+	
+	st -X, r17 //STORE NEW DIFFERENCE
+	st -X, r16 //STORE NEW DIFFERENCE
 
-	pop r18
+	pop r25
+	pop r24
 	pop r17
 	pop r16
 	pop ZL
 	pop ZH
 	pop XL
 	pop XH
+	ret
+
+///////////////////////////////////////////////////////////////////
+COLOR_MATCH:
+	push YH
+	push YL
+	push ZH
+	push ZL
+	push r16
+	push r17
+	push r18
+	push r19
+	push r20
+
+	ldi ZH, HIGH(RED_DIFF) 
+	ldi ZL, LOW(RED_DIFF)
+	ldi YH, HIGH(GREEN_DIFF)
+	ldi YL, LOW(GREEN_DIFF)
+	ldi r20, NUMBER_OF_COLORS-1 //NUMBER OF COMPARES
+	//Z POINTS TO THE SMALLEST VALUE
+COLOR_MATCH_NEXT_SKITTLE:
+	ldd r16, Z+0
+	ldd r17, Z+1
+	ldd r18, Y+0
+	ldd r19, Y+1
+	// Z < Y ?
+	sub r16, r18
+	sbc r17, r19
+	brmi Z_POINTER_STAYS 
+	brlo Z_POINTER_STAYS 
+
+	mov ZH, YH
+	mov ZL, YL
+Z_POINTER_STAYS:
+	adiw YH:YL, 2
+	dec r20
+	brne COLOR_MATCH_NEXT_SKITTLE
+	// GET OFFSET FOR COLOR OF SKITTLE THATS CLOSEST
+	subi ZL, LOW(RED_DIFF) //END POINT - START POINT
+	lsr ZL //SINCE EACH DIFF IS 2 BYTE OFFSET IS HALVED
+	sts LATEST_SKITTLE_COLOR, ZL
+
+	pop r20
+	pop r19
+	pop r18
+	pop r17
+	pop r16
+	pop ZL
+	pop ZH
+	pop YL
+	pop YH
 	ret
 ///////////////////////////////////////////////////////////////////
 INT0_INIT:
@@ -506,6 +582,7 @@ INIT_CLEAR_SRAM_LOOP:
 ///////////////////////////////////////////////////////////////////
 RGB_INIT:
 	push r17
+
 	ldi r17, RGB_SLAVE_ADDR
 	sts CURRENT_SLAVE, r17
 	//
@@ -648,6 +725,38 @@ SEND_ADDRESS_READ: // LOOKS IN SRAM FOR CURRENT ADDRESED SLAVE
 	pop r16
 	ret
 ///////////////////////////////////////////////////////////////////
+TWI_ERROR_HANDLER:
+	push ZH
+	push ZL
+	push r16
+	in r16, TWSR
+	andi r16, 0xF8
+	cpi r16, TWSR_MT_SLA_NACK
+	brne NEXT_ERROR_CODE1
+	ldi ZH, HIGH(2*ERR_MT_SLA_NACK)
+	ldi ZL, LOW(2*ERR_MT_SLA_NACK)
+	call OUTPUT_DISPLAY_ERROR
+
+NEXT_ERROR_CODE1:
+	cpi r16, TWSR_MT_DATA_NACK
+	brne NEXT_ERROR_CODE2
+	ldi ZH, HIGH(2*ERR_MT_DATA_NACK)
+	ldi ZL, LOW(2*ERR_MT_DATA_NACK)
+	call OUTPUT_DISPLAY_ERROR
+
+NEXT_ERROR_CODE2:
+	cpi r16, TWSR_MT_DATA_NACK
+	brne NO_ERROR_CODE
+	ldi ZH, HIGH(2*ERR_MR_SLA_NACK)
+	ldi ZL, LOW(2*ERR_MR_SLA_NACK)
+	call OUTPUT_DISPLAY_ERROR
+
+NO_ERROR_CODE:
+	pop r16
+	pop ZL
+	pop ZH
+	ret
+///////////////////////////////////////////////////////////////////
 TWI_START_PULSE:
 	push r16
 	ldi r16, (1<<TWINT) | (1<<TWSTA) | (1<<TWEN)
@@ -669,11 +778,11 @@ TWI_WAIT:
 	rjmp TWI_WAIT
 	ret
 ///////////////////////////////////////////////////////////////////
-RGB_DELAY://2.4 ms delay at 8MHz. This is the time each integration cycle of the RGB-sensor takes.
+RGB_DELAY://2.55 ms delay at 8MHz. This is the time each integration cycle of the RGB-sensor takes worst case.
 	push r16
 	push r17
 	ldi  r16, 25
-	ldi  r17, 240
+	ldi  r17, 255
 RGB_DELAY_LOOP:
 	dec  r17
 	brne RGB_DELAY_LOOP
@@ -684,7 +793,7 @@ RGB_DELAY_LOOP:
 	ret
 
 ///////////////////////////////////////////////////////////////////
-RGB_DELAY_INTEGRATION:  //NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1-ATIME_VALUE). EACH INTEGRATION CYCLE TAKES 2.4 ms		
+RGB_DELAY_INTEGRATION:  //NUMBER OF INTEGRATION CYCLES = 256-ATIME_VALUE (0xFF+1-ATIME_VALUE)	
 	push r16
 	call RGB_DELAY //LOOPS ONCE IN ALL CASES
 	ldi r16, 0xFF-ATIME_VALUE
@@ -706,17 +815,22 @@ READ_ALL_8_RGB_REGISTERS_INTO_SRAM:
 	push YL
 	push r16
 	push r17
+
 	ldi r16, RGB_SLAVE_ADDR
 	sts CURRENT_SLAVE, r16
 
 	call TWI_START_PULSE
 	call SEND_ADDRESS_WRITE
+	call TWI_ERROR_HANDLER
 
 	ldi r17, RGB_CDATAL |  RGB_COMMAND_BIT | RGB_AUTO_INC_BIT
 	call TWI_SEND_DATA
+	call TWI_ERROR_HANDLER
 
 	call TWI_START_PULSE
 	call SEND_ADDRESS_READ
+	call TWI_ERROR_HANDLER
+
 	ldi r16, 7 //Number of registers -1
 	ldi YH, HIGH(CDATAL)
 	ldi YL, LOW(CDATAL)
@@ -739,6 +853,8 @@ READ_NEXT_RBG_REGISTER:
 ///////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_INIT:	
+	push r16
+	push r20
 	ldi r16, 0x00
 	out DDRA, r16 // DB0-DB7 set to READMODE as default, will change briefly when writing.
 	ldi r16, 0x07 
@@ -763,6 +879,8 @@ LCD_INIT:
 	call LCD_INSTRUCTION_WRITE 
 
 	call RGB_DELAY //REUSING DELAY FUNCTION
+	pop r20
+	pop r16
 	// INIT DONE
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -772,9 +890,11 @@ SEND_SKITTLE_COLOR_TO_SLAVE:
 	sts CURRENT_SLAVE, r17
 	call TWI_START_PULSE
 	call SEND_ADDRESS_WRITE
+	call TWI_ERROR_HANDLER
 
 	lds r17, LATEST_SKITTLE_COLOR
 	call TWI_SEND_DATA
+	call TWI_ERROR_HANDLER
 	call TWI_STOP_PULSE
 	pop r17
 	ret
@@ -784,19 +904,22 @@ UPDATE_NUMBER_OF_SKITTLES:
 	push r16
 	push YH
 	push YL
-
-	ldi YH, HIGH(LATEST_SKITTLE_COLOR)
-	ldi YL, LOW(LATEST_SKITTLE_COLOR)
-	ld r16, Y //LOADS WHICH SKITTLE TO INC USING ITS OFFSET
+	//LOADS WHICH SKITTLE TO INC USING ITS POSITION AS OFFSET
+	ldi YH, HIGH(LATEST_SKITTLE_COLOR) //SRAM POSITION AFTER IS RED_N
+	ldi YL, LOW(LATEST_SKITTLE_COLOR)  //SRAM POSITION AFTER IS RED_N
+	ld r16, Y 
 	inc r16
 UPDATE_NUMBER_OF_SKITTLES_LOOP:
-	adiw YH:YL, 1
+	adiw YH:YL, 1 
 	dec r16
 	brne UPDATE_NUMBER_OF_SKITTLES_LOOP	
-	ld r16, Y
+	ld r16, Y 
 	inc r16
+	cpi r16, 100
+	brne UNDER_MAX_COUNT
+	ldi r16, 99 //SET TO MAX DISPLAYED
+UNDER_MAX_COUNT:
 	st Y, r16
-
 	pop YL
 	pop YH
 	pop r16
@@ -806,6 +929,9 @@ UPDATE_DISPLAY:
 	push r20
 	push YH
 	push YL
+
+	ldi r20, Clear_Display 
+	call LCD_INSTRUCTION_WRITE
 
 	ldi r20, 'R'
 	call LCD_DATA_WRITE
@@ -826,8 +952,8 @@ UPDATE_DISPLAY:
 	ldi YL, LOW(GREEN_N)
 	call OUTPUT_DISPLAY_BYTE_TO_BCD
 	
-	ldi r20, Second_Line_Address
-	call LCD_INSTRUCTION_WRITE
+	ldi r20, ' '
+	call LCD_DATA_WRITE
 
 	ldi r20, 'O'
 	call LCD_DATA_WRITE
@@ -837,8 +963,8 @@ UPDATE_DISPLAY:
 	ldi YL, LOW(ORANGE_N)
 	call OUTPUT_DISPLAY_BYTE_TO_BCD
 
-	ldi r20, ' '
-	call LCD_DATA_WRITE
+	ldi r20, Second_Line_Address
+	call LCD_INSTRUCTION_WRITE
 
 	ldi r20, 'Y'
 	call LCD_DATA_WRITE
@@ -858,13 +984,153 @@ UPDATE_DISPLAY:
 	ldi YH, HIGH(PURPLE_N)
 	ldi YL, LOW(PURPLE_N)
 	call OUTPUT_DISPLAY_BYTE_TO_BCD
-	
-	ldi r20, Return_Home //SETS CURSOR BACK AT START OF LINE 1
-	call LCD_INSTRUCTION_WRITE
+/*	
+	ldi r20, ' '
+	call LCD_DATA_WRITE
+
+	ldi r20, 'N'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi YH, HIGH(NO_SKITTLE_N)
+	ldi YL, LOW(NO_SKITTLE_N)
+	call OUTPUT_DISPLAY_BYTE_TO_BCD
+*/
+	//ldi r20, Return_Home //SETS CURSOR BACK AT START OF LINE 1
+	//call LCD_INSTRUCTION_WRITE //CLEEAR DISPLAY I BÖRJAN FIXAR
 	
 	pop YL
 	pop YH
 	pop r20
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+UPDATE_DISPLAY_DEBUG:
+	push r20
+	push YH
+	push YL
+
+	ldi r20, Clear_Display 
+	call LCD_INSTRUCTION_WRITE
+
+	ldi r20, 'C'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi YH, HIGH(CDATAL)
+	ldi YL, LOW(CDATAL)
+	ldi r17, 3 //NUMBER OF DIGITS TO PRINT
+	call OUTPUT_DISPLAY_BYTE_TO_BCD_MODULAR
+
+	ldi r20, ' '
+	call LCD_DATA_WRITE
+
+	ldi r20, 'R'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi YH, HIGH(RDATAL)
+	ldi YL, LOW(RDATAL)
+	ldi r17, 3
+	call OUTPUT_DISPLAY_BYTE_TO_BCD_MODULAR
+	
+	ldi r20, Second_Line_Address
+	call LCD_INSTRUCTION_WRITE
+
+	ldi r20, 'G'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi YH, HIGH(GDATAL)
+	ldi YL, LOW(GDATAL)
+	ldi r17, 3
+	call OUTPUT_DISPLAY_BYTE_TO_BCD_MODULAR
+	
+	ldi r20, ' '
+	call LCD_DATA_WRITE
+
+	ldi r20, 'B'
+	call LCD_DATA_WRITE
+	ldi r20, ':'
+	call LCD_DATA_WRITE
+	ldi YH, HIGH(BDATAL)
+	ldi YL, LOW(BDATAL)
+	ldi r17, 3
+	call OUTPUT_DISPLAY_BYTE_TO_BCD_MODULAR
+	
+	pop YL
+	pop YH
+	pop r20
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+OUTPUT_DISPLAY_BYTE_TO_BCD_MODULAR: //HOW MANY NUMBERS AS ARGUMENT IN R17. WANTS Y POINTER TO LOW BYTE OF NUMBER. WORKS FROM 1-3 DIGITS
+	push r17
+	push r18
+	push r19
+	push r20
+	ldd r18, Y+0
+	ldd r19, Y+1
+	cpi r19, HIGH(1000)
+	brsh NUMBER_TO_BIG
+NEXT_BCD:	
+	call GET_BCD_DIGIT //LEAVES NUMBER IN R20
+	subi r20, -48 //ADD ASCII OFFSET
+	call LCD_DATA_WRITE 
+	dec r17
+	brne NEXT_BCD
+	rjmp OUTPUT_DISPLAY_BYTE_TO_BCD_MODULAR_DONE
+
+NUMBER_TO_BIG:
+	ldi r20, 42
+	call LCD_DATA_WRITE 
+	dec r17
+	brne NUMBER_TO_BIG
+
+OUTPUT_DISPLAY_BYTE_TO_BCD_MODULAR_DONE:	
+	pop r17
+	pop r18
+	pop r19
+	pop r20
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+GET_BCD_DIGIT:
+	push r16
+	push r17
+	push r21 
+	//NUMBER OF DIGITS IN R17
+	clr r20
+	clr r21 //ZERO
+
+	ldi r16, 1
+	dec r17
+	breq GET_DIGIT
+
+	ldi r16, 10
+	dec r17
+	breq GET_DIGIT
+
+	ldi r16, 100
+	dec r17
+	breq GET_DIGIT
+	//NUMBER TOO BIG IF YOU GET HERE
+GET_DIGIT:
+	
+	sub r18, r16
+	sbc r19, r21
+	brmi GET_ASCII
+	//brcs OUTPUT
+	inc r20 //LOOP COUNTER AND LCD OUTPUT REG
+	jmp GET_DIGIT
+GET_ASCII:
+	add r18, r16 //RESTORE
+	adc r19, r21 //RESTORE	
+
+	cpi r20, 10
+	brlo DIGIT_OK
+	ldi r20, 42-48 //LOAD ASTERIX WITHOUT ASCII OFFSET
+DIGIT_OK:
+	pop r21
+	pop r17
+	pop r16
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 OUTPUT_DISPLAY_BYTE_TO_BCD:
@@ -893,6 +1159,66 @@ DIGITS_DONE:
 	pop r20
 	pop r17
 	pop r16
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+OUTPUT_DISPLAY_FROM_FLASH:
+	push ZH
+	push ZL
+	push r20
+NEXT_CHAR:
+	lpm r20, Z+
+	cpi r20, 0
+	breq OUTPUT_DISPLAY_FROM_FLASH_DONE
+	call LCD_DATA_WRITE
+	rjmp NEXT_CHAR
+OUTPUT_DISPLAY_FROM_FLASH_DONE:
+	pop r20
+	pop ZL
+	pop ZH
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+OUTPUT_DISPLAY_ERROR: //WANTS Z POINTER TO ERROR MSG
+	push ZH
+	push ZL
+	push r20
+
+	ldi r20, Clear_Display
+	call LCD_INSTRUCTION_WRITE
+
+	push ZH
+	push ZL
+	ldi  ZH, HIGH(2*ERROR_GENERIC)
+	ldi  ZL, LOW(2*ERROR_GENERIC)
+	call OUTPUT_DISPLAY_FROM_FLASH
+
+	lds r20, CURRENT_SLAVE
+
+	ldi  ZH, HIGH(2*ERROR_RGB_SLAVE)
+	ldi  ZL, LOW(2*ERROR_RGB_SLAVE)
+	cpi r20, RGB_SLAVE_ADDR
+	breq OUTPUT_WHICH_SLAVE
+
+	ldi  ZH, HIGH(2*ERROR_MCU_SLAVE)
+	ldi  ZL, LOW(2*ERROR_MCU_SLAVE)
+	cpi r20, MCU_SLAVE_ADDR
+	breq OUTPUT_WHICH_SLAVE
+
+	ldi  ZH, HIGH(2*ERROR_GENERIC)
+	ldi  ZL, LOW(2*ERROR_GENERIC)
+
+OUTPUT_WHICH_SLAVE:
+	call OUTPUT_DISPLAY_FROM_FLASH
+
+	ldi r20, Second_Line_Address
+	call LCD_INSTRUCTION_WRITE
+
+	pop ZL
+	pop ZH
+	call OUTPUT_DISPLAY_FROM_FLASH
+
+	pop r20
+	pop ZL
+	pop ZH
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 LCD_INSTRUCTION_WRITE:
@@ -948,176 +1274,49 @@ LCD_WAIT_IF_BUSY:
 	rjmp LCD_WAIT_IF_BUSY
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-;***************************************************************************
-;*
-;* "mpy16u" - 16x16 Bit Unsigned Multiplication
-;*
-;* This subroutine multiplies the two 16-bit register variables 
-;* mp16uH:mp16uL and mc16uH:mc16uL.
-;* The result is placed in m16u3:m16u2:m16u1:m16u0.
-;*  
-;* Number of words	:105 + return
-;* Number of cycles	:105 + return
-;* Low registers used	:None
-;* High registers used  :6 (mp16uL,mp16uH,mc16uL/m16u0,mc16uH/m16u1,m16u2,
-;*			    m16u3)	
-;*
-;***************************************************************************
+MULTI16: //MULTI1 IN R17:R16, MULTI2 IN R19:R18
+	//RESULT IN R21:R20:R19:R18
+	push r0
+	push r1
+	push r2
+	push r3
+	push r4
+	push r5
+	push r22
 
-;***** Subroutine Register Variables
+	clr r22 //ZERO
+	mul r17, r19 //MSB1*MSB2
+	mov r4, r0
+	mov r5, r1
 
+	mul r16, r18 //LSB1*LSB2
+	mov r2, r0
+	mov r3, r1
 
+	mul r17, r18 //MSB1*LSB2
+	add r3, r0
+	adc r4, r1
+	adc r5, r22 
 
-.def	mc16uL	=r16		;multiplicand low byte
-.def	mc16uH	=r17		;multiplicand high byte
-.def	mp16uL	=r18		;multiplier low byte
-.def	mp16uH	=r19		;multiplier high byte
-.def	m16u0	=r18		;result byte 0 (LSB)
-.def	m16u1	=r19		;result byte 1
-.def	m16u2	=r20		;result byte 2
-.def	m16u3	=r21		;result byte 3 (MSB)
+	mul r16, r19 //LSB1*MSB2
+	add r3, r0
+	adc r4, r1
+	adc r5, r22 
 
-;***** Code
+	mov r18, r2
+	mov r19, r3
+	mov r20, r4
+	mov r21, r5
 
-mpy16u: push r16
-	push r17
-
-	clr	m16u3		;clear 2 highest bytes of result
-	clr	m16u2	
-	lsr	mp16uH		;rotate multiplier Low
-	ror	mp16uL		;rotate multiplier High
-
-	brcc	noadd0		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd0:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd1		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd1:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd2		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd2:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd3		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd3:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd4		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd4:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd5		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd5:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd6		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd6:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd7		;if carry sett
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd7:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd8		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd8:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noadd9		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noadd9:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad10		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad10:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad11		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad11:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad12		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad12:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad13		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad13:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad14		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad14:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	brcc	noad15		;if carry set
-	add	m16u2,mc16uL	;    add multiplicand Low to byte 2 of res
-	adc	m16u3,mc16uH	;    add multiplicand high to byte 3 of res
-noad15:	ror	m16u3		;shift right result byte 3
-	ror	m16u2		;rotate right result byte 2
-	ror	m16u1		;rotate result byte 1 and multiplier High
-	ror	m16u0		;rotate result byte 0 and multiplier Low
-
-	pop r17
-	pop r16
+	pop r22
+	pop r5
+	pop r4
+	pop r3
+	pop r2
+	pop r1
+	pop r0
 	ret
+
 ;***************************************************************************
 ;*
 ;* "div16u" - 16/16 Bit Unsigned Division
@@ -1368,10 +1567,19 @@ d16u_32:rol	dd16uL		;shift left dividend
 	ret
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-.org 0x1900 //CLEAR VALUES ARE SCALED UP TO THE PRECISION-CONSTANT
+.org 0x1900 
 REF_VALUES:
-	.db LOW(RED_CLEAR*PRECISION),    HIGH(RED_CLEAR*PRECISION),    LOW(RED_RED),    HIGH(RED_RED),    LOW(RED_GREEN),    HIGH(RED_GREEN),    LOW(RED_BLUE),    HIGH(RED_BLUE)
-	.db LOW(GREEN_CLEAR*PRECISION),  HIGH(GREEN_CLEAR*PRECISION),  LOW(GREEN_RED),  HIGH(GREEN_RED),  LOW(GREEN_GREEN),  HIGH(GREEN_GREEN),  LOW(GREEN_BLUE),  HIGH(GREEN_BLUE)
-	.db LOW(ORANGE_CLEAR*PRECISION), HIGH(ORANGE_CLEAR*PRECISION), LOW(ORANGE_RED), HIGH(ORANGE_RED), LOW(ORANGE_GREEN), HIGH(ORANGE_GREEN), LOW(ORANGE_BLUE), HIGH(ORANGE_BLUE)
-	.db LOW(YELLOW_CLEAR*PRECISION), HIGH(YELLOW_CLEAR*PRECISION), LOW(YELLOW_RED), HIGH(YELLOW_RED), LOW(YELLOW_GREEN), HIGH(YELLOW_GREEN), LOW(YELLOW_BLUE), HIGH(YELLOW_BLUE)
-	.db LOW(PURPLE_CLEAR*PRECISION), HIGH(PURPLE_CLEAR*PRECISION), LOW(PURPLE_RED), HIGH(PURPLE_RED), LOW(PURPLE_GREEN), HIGH(PURPLE_GREEN), LOW(PURPLE_BLUE), HIGH(PURPLE_BLUE)
+	.db LOW(RED_CLEAR),    HIGH(RED_CLEAR),    LOW(RED_RED),    HIGH(RED_RED),    LOW(RED_GREEN),    HIGH(RED_GREEN),    LOW(RED_BLUE),    HIGH(RED_BLUE)
+	.db LOW(GREEN_CLEAR),  HIGH(GREEN_CLEAR),  LOW(GREEN_RED),  HIGH(GREEN_RED),  LOW(GREEN_GREEN),  HIGH(GREEN_GREEN),  LOW(GREEN_BLUE),  HIGH(GREEN_BLUE)
+	.db LOW(ORANGE_CLEAR), HIGH(ORANGE_CLEAR), LOW(ORANGE_RED), HIGH(ORANGE_RED), LOW(ORANGE_GREEN), HIGH(ORANGE_GREEN), LOW(ORANGE_BLUE), HIGH(ORANGE_BLUE)
+	.db LOW(YELLOW_CLEAR), HIGH(YELLOW_CLEAR), LOW(YELLOW_RED), HIGH(YELLOW_RED), LOW(YELLOW_GREEN), HIGH(YELLOW_GREEN), LOW(YELLOW_BLUE), HIGH(YELLOW_BLUE)
+	.db LOW(PURPLE_CLEAR), HIGH(PURPLE_CLEAR), LOW(PURPLE_RED), HIGH(PURPLE_RED), LOW(PURPLE_GREEN), HIGH(PURPLE_GREEN), LOW(PURPLE_BLUE), HIGH(PURPLE_BLUE)
+	.db LOW(NO_SKITTLE_CLEAR), HIGH(NO_SKITTLE_CLEAR), LOW(NO_SKITTLE_RED), HIGH(NO_SKITTLE_RED), LOW(NO_SKITTLE_GREEN), HIGH(NO_SKITTLE_GREEN), LOW(NO_SKITTLE_BLUE), HIGH(NO_SKITTLE_BLUE)
+
+//////ERROR_CODES/////
+ERROR_RGB_SLAVE:	.db "RGB", 0
+ERROR_MCU_SLAVE:	.db "MCU", 0
+ERROR_GENERIC:		.db "ERROR:", 0
+ERR_MT_SLA_NACK:	.db "MT SLA NACK", 0
+ERR_MT_DATA_NACK:	.db "MT DATA NACK", 0
+ERR_MR_SLA_NACK:	.db "MR SLA NACK", 0

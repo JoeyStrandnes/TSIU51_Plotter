@@ -90,12 +90,21 @@
 
 
 
-;SCALE:
-	;.db		0xFC, 0xE0, 0xCA, 0xBA, 0xA3, 0x90, 0x7E, 0x7A
 ;Zelda
 ;	.db		L_G1, L_A1, L_B1, L_Db2, L_G1, L_A1, L_B1, L_Db2, L_Ab1, L_Bb1, L_C2, L_D2, L_Ab1, L_Bb1, L_C2, L_D2, L_A1, L_B1, L_Db2, L_Eb2, L_A1, L_B1, L_Db2, L_Eb2, L_Bb1, L_C2, L_D2, L_E2, L_Bb1, L_C2, L_D2, L_E2, L_B1, L_Db2, L_Eb2, L_F2, L_C2, L_D2, L_E2, L_Gb2, L_Db2, L_Eb2, L_F2, L_G2, L_D2, L_E2, L_Gb2, L_Ab2, L_A1, L_A1, L_Bb1, L_Bb1, L_B1, L_B1, L_C2, L_C2, L_C2, L_C2, L_C2, L_C2
 
 ;	.db		 G1, A1, B1, Db2, G1, A1, B1, Db2, Ab1, Bb1, C2, D2, Ab1, Bb1, C2, D2, A1, B1, Db2, Eb2, A1, B1, Db2, Eb2, Bb1, C2, D2, E2, Bb1, C2, D2, E2, B1, Db2, Eb2, F2, C2, D2, E2, Gb2, Db2, Eb2, F2, G2, D2, E2, Gb2, Ab2, 0, 0, 0, 0, A1, Bb1, B1, C2, C2, C2, C2
+
+;Carousel:
+	;.db		L_C3, 0, L_B2, 0, L_Bb2, L_B2, L_Bb2, L_A2, L_Ab2, 0, L_G2, 0, L_Gb2, L_Gb2, L_G2, L_G2, 
+	L_A2, 0, L_Ab2, 0, L_G2, L_Ab2, L_G2, L_Gb2, L_F2, 0, L_E2, 0, L_Eb2, L_Eb2, L_E2, L_E2, 
+	L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, 
+	L_B1, L_C2, L_Db2, L_D2, L_Eb2, L_E2, L_F2, L_Gb2, L_G2, L_Ab2, L_A2, L_B2, L_A2, L_A2, L_G2, L_G2
+
+	;.db		C3, 0, B2, 0, Bb2, B2, Bb2, A2, Ab2, 0, G2, 0, Gb2, Gb2, G2, G2, 
+	A2, 0, Ab2, 0, G2, Ab2, G2, Gb2, F2, 0, E2, 0, Eb2, Eb2, E2, E2, 
+	G2, G2, F2, F2, Db2, Db2, D2, D2, G2, G2, F2, F2, Db2, Db2, D2, D2, 
+	B1, C2, Db2, D2, Eb2, E2, F2, Gb2, G2, Ab2, A2, B2, A2, A2, G2, G2
 
 NOTE_LENGTH:
 	.db		L_A1, L_Bb1, L_B1, L_C2, L_C2, L_C2, L_C2
@@ -122,15 +131,11 @@ START:
 
 
 
-	call	SONG1
+	call	SONG
 INF:
 	rjmp	INF
 
-SONG1:
-	lpm		r16, Z
-	cpi		r16, 0
-	breq	DELAY
-
+SONG:
 	mov		r16, ZH
 	mov		r17, ZL
 	pop		r18
@@ -138,6 +143,7 @@ SONG1:
 	pop		ZL
 	pop		ZH
 	lpm		NOTE_LENGTH_REG, Z
+	lsr		NOTE_LENGTH_REG	//Gör till åttondelar
 	adiw	Z, 1
 	push	ZH
 	push	ZL
@@ -145,6 +151,10 @@ SONG1:
 	push	r18
 	mov		ZH, r16
 	mov		ZL, r17
+
+	lpm		r16, Z
+	cpi		r16, 0
+	breq	DELAY
 
 	call	WAVE
 SONGCONTINUE:
