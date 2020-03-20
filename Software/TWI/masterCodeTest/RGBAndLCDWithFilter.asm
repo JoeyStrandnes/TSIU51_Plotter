@@ -1,4 +1,4 @@
-//////// 
+//////// TSIU51 SKITTLE SORT ////////////////////////////////////////////////
 
 //////// RBG_SENSOR STATIC REGISTERS ////////////////////////////////////////
 .equ RGB_ENABLE =0x00
@@ -30,7 +30,7 @@
 .equ PRECISION   = 64  //SCALES UP OUR REFERENCE-CLEARVALUES. CLEARDATA*PRECISION SHOULD BE AS CLOSE TO 16 BIT WITHOUT OVERFLOWING
 .equ PRECISION_EXP = 6  // EXPONENT OF PRECISION IN BASE 2
 //////// COLOR ALIAS ////////////////////////////////////////////
-.equ NUMBER_OF_COLORS = 5 //5 or 6, depends on if we want NO_SKITTLE
+.equ NUMBER_OF_COLORS = 6 //5 or 6, depends on if we want NO_SKITTLE
 .equ RED_SKITTLE    = 0
 .equ GREEN_SKITTLE  = 1
 .equ ORANGE_SKITTLE = 2
@@ -119,22 +119,21 @@ CURRENT_SLAVE:
 
 	.org 0x02A
 ////////////////////////////////////////////////////////////////////////
-BOOT:
+BOOT://FUSE IS SET TO 64 ms STARTUP
 
 	ldi r16, HIGH(RAMEND)
 	out SPH, r16
 	ldi r16, LOW(RAMEND)
 	out SPL, r16
-	call RGB_DELAY_INTEGRATION
+
 	ldi YH,HIGH(SRAM_START)
 	ldi YL,LOW(SRAM_START) 
 	ldi r16, 28 //NUMBER OF BYTES IN SRAM
 	call INIT_CLEAR_SRAM // puts zeroes in N bytes from Y
-	call TWI_INIT
-	call RGB_DELAY_INTEGRATION
-	call RGB_INIT
 	call INT0_INIT
+	call TWI_INIT
 	call LCD_INIT
+	call RGB_INIT
 	call UPDATE_DISPLAY
 	sei 
 
@@ -189,40 +188,40 @@ DONE:
 // REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xD0
 // ALL CLEAR-VALUE*PRECISION MUST BE WITHIN 16bit
 RED:
-	.equ RED_CLEAR = 680//609//675
-	.equ RED_RED = 240//210//227
-	.equ RED_GREEN = 220//195//219
-	.equ RED_BLUE = 200//178//199
+	.equ RED_CLEAR = 679
+	.equ RED_RED = 232
+	.equ RED_GREEN = 222
+	.equ RED_BLUE = 200
 
 GREEN:
-	.equ GREEN_CLEAR = 676//617//717
-	.equ GREEN_RED = 212//192//221
-	.equ GREEN_GREEN = 236//216//252
-	.equ GREEN_BLUE = 198//180//210
+	.equ GREEN_CLEAR = 708
+	.equ GREEN_RED = 226
+	.equ GREEN_GREEN = 248
+	.equ GREEN_BLUE = 211
 
 ORANGE:
-	.equ ORANGE_CLEAR = 699//670//750
-	.equ ORANGE_RED = 254//255//271
-	.equ ORANGE_GREEN = 221//207//238
-	.equ ORANGE_BLUE = 196//182//211
+	.equ ORANGE_CLEAR = 733
+	.equ ORANGE_RED = 261
+	.equ ORANGE_GREEN = 239
+	.equ ORANGE_BLUE = 211
 
 YELLOW:
-	.equ YELLOW_CLEAR = 813//702//842
-	.equ YELLOW_RED = 295//250//299
-	.equ YELLOW_GREEN = 273//235//283
-	.equ YELLOW_BLUE = 220//191//230
+	.equ YELLOW_CLEAR = 763
+	.equ YELLOW_RED = 267
+	.equ YELLOW_GREEN = 261
+	.equ YELLOW_BLUE = 217
 
 PURPLE:
-	.equ PURPLE_CLEAR = 643//587//670
-	.equ PURPLE_RED = 208//192//211
-	.equ PURPLE_GREEN = 211//191//222
-	.equ PURPLE_BLUE = 194//176//203
+	.equ PURPLE_CLEAR = 674
+	.equ PURPLE_RED = 218
+	.equ PURPLE_GREEN = 226
+	.equ PURPLE_BLUE = 205
 
 NOTHING:
-	.equ NO_SKITTLE_CLEAR = 604//553//636
-	.equ NO_SKITTLE_RED = 190//175//195
-	.equ NO_SKITTLE_GREEN = 201//183//211
-	.equ NO_SKITTLE_BLUE = 181//164//192
+	.equ NO_SKITTLE_CLEAR = 651
+	.equ NO_SKITTLE_RED = 208
+	.equ NO_SKITTLE_GREEN = 220
+	.equ NO_SKITTLE_BLUE = 198
 
 ///////////////////////////////////////////////////////////////////
 ISR_INT0:
@@ -230,21 +229,13 @@ ISR_INT0:
 	in r16, SREG
 	push r16
 
-	ldi r16, 20
-MORE_DELAY1:
+	//call THREE_SECOND_DELAY
 	call RGB_DELAY_INTEGRATION
-	dec r16
-	brne MORE_DELAY1
-
+	call RGB_DELAY_INTEGRATION
 	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM 
-	call UPDATE_DISPLAY_DEBUG
-
-	ldi r16, 20
-MORE_DELAY2:
-	call RGB_DELAY_INTEGRATION
-	dec r16
-	brne MORE_DELAY2
-
+	//call UPDATE_DISPLAY_DEBUG
+	//call THREE_SECOND_DELAY
+	//call THREE_SECOND_DELAY
 
 	call COMPARE
 	call COLOR_MATCH
@@ -583,6 +574,7 @@ RGB_INIT:
 	//
 	call TWI_START_PULSE
 	call SEND_ADDRESS_WRITE
+	call TWI_ERROR_HANDLER
 
 	ldi r17, RGB_ENABLE | RGB_COMMAND_BIT
 	call TWI_SEND_DATA 
@@ -731,6 +723,7 @@ TWI_ERROR_HANDLER:
 	ldi ZH, HIGH(2*ERR_MT_SLA_NACK)
 	ldi ZL, LOW(2*ERR_MT_SLA_NACK)
 	call OUTPUT_DISPLAY_ERROR
+	call THREE_SECOND_DELAY
 
 NEXT_ERROR_CODE1:
 	cpi r16, TWSR_MT_DATA_NACK
@@ -738,13 +731,15 @@ NEXT_ERROR_CODE1:
 	ldi ZH, HIGH(2*ERR_MT_DATA_NACK)
 	ldi ZL, LOW(2*ERR_MT_DATA_NACK)
 	call OUTPUT_DISPLAY_ERROR
+	call THREE_SECOND_DELAY
 
 NEXT_ERROR_CODE2:
-	cpi r16, TWSR_MT_DATA_NACK
+	cpi r16, TWSR_MR_SLA_NACK
 	brne NO_ERROR_CODE
 	ldi ZH, HIGH(2*ERR_MR_SLA_NACK)
 	ldi ZL, LOW(2*ERR_MR_SLA_NACK)
 	call OUTPUT_DISPLAY_ERROR
+	call THREE_SECOND_DELAY
 
 NO_ERROR_CODE:
 	pop r16
@@ -888,6 +883,10 @@ SEND_SKITTLE_COLOR_TO_SLAVE:
 	call TWI_ERROR_HANDLER
 
 	lds r17, LATEST_SKITTLE_COLOR
+	cpi r17, NO_SKITTLE
+	brne SEND_SKITTLE_COLOR
+	ldi r17, 4 // DEFAULT TO PURPLE
+SEND_SKITTLE_COLOR:
 	call TWI_SEND_DATA
 	call TWI_ERROR_HANDLER
 	call TWI_STOP_PULSE
@@ -979,7 +978,7 @@ UPDATE_DISPLAY:
 	ldi YH, HIGH(PURPLE_N)
 	ldi YL, LOW(PURPLE_N)
 	call OUTPUT_DISPLAY_BYTE_TO_BCD
-/*	
+	
 	ldi r20, ' '
 	call LCD_DATA_WRITE
 
@@ -990,7 +989,7 @@ UPDATE_DISPLAY:
 	ldi YH, HIGH(NO_SKITTLE_N)
 	ldi YL, LOW(NO_SKITTLE_N)
 	call OUTPUT_DISPLAY_BYTE_TO_BCD
-*/
+
 	
 	pop YL
 	pop YH
@@ -1118,10 +1117,11 @@ GET_DIGIT:
 GET_ASCII:
 	add r18, r16 //RESTORE
 	adc r19, r21 //RESTORE	
-
+//TODO: ONÖDIGT?
 	cpi r20, 10
 	brlo DIGIT_OK
 	ldi r20, 42-48 //LOAD ASTERIX WITHOUT ASCII OFFSET
+//
 DIGIT_OK:
 	pop r21
 	pop r17
@@ -1267,6 +1267,32 @@ LCD_WAIT_IF_BUSY:
 	out PORTB, r16 //E PULSE STOPS
 	sbic PINA, 7
 	rjmp LCD_WAIT_IF_BUSY
+	ret
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////
+THREE_SECOND_DELAY:
+
+; Generated by delay loop calculator
+; at http://www.bretmulvey.com/avrdelay.html
+;
+; Delay 24 016 000 cycles
+; 3s 2ms at 8.0 MHz
+	push r18
+	push r19
+	push r20
+    ldi  r18, 122
+    ldi  r19, 214
+    ldi  r20, 74
+THREE_SECOND_DELAY_LOOP: 
+	dec  r20
+    brne THREE_SECOND_DELAY_LOOP
+    dec  r19
+    brne THREE_SECOND_DELAY_LOOP
+    dec  r18
+    brne THREE_SECOND_DELAY_LOOP
+
+	pop r20
+	pop r19
+	pop r18
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 MULTI16: //MULTI1 IN R17:R16, MULTI2 IN R19:R18
