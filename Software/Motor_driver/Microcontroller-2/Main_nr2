@@ -35,7 +35,8 @@ COLOR_POS:
 	.equ	SERVO_RR	= 2600		;Refresh rate
 	.equ	SERVO_CW	= 10		;Clockwise
 	.equ	SERVO_CCW	= 200		;Counter clockwise
-	.equ	SERVO_ST	= 193		;Stop
+	.equ	LOWER_SERVO_CCW	= 200		;Counter clockwise
+	.equ	SERVO_ST	= 192		;Stop
 	.equ	NO_SKITTLE	= 5
 
 	;---code
@@ -62,10 +63,6 @@ ISR_UPPER_TRIGGER:
 	in		r16, SREG
 	push	r16
 	;
-
-
-
-	//call	DELAY
 	
 	ldi		r16, HIGH(SERVO_ST)
 	out		OCR1BH, r16
@@ -125,6 +122,11 @@ FIRST_SPIN_FIRST_TRIGGER:
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1AL, r16
 
+	cbr		TOGGLE_REG, 0b00000100
+
+	in		r16, OCR1BL		
+	cpi		r16, LOW(SERVO_ST)
+	brne	ISR_LOWER_TRIGGER_END //IF UPPER DISK IS STILL SPINNING, DONT SEND PULSE TO MASTER
 	//SEND PULSE FOR FIRST READ
 	ldi		r16, 0
 	out		PORTB, r16 
@@ -132,7 +134,7 @@ FIRST_SPIN_FIRST_TRIGGER:
 	ldi		r16, 1
 	out		PORTB, r16
 
-	cbr		TOGGLE_REG, 0b00000100
+	
 	rjmp	ISR_LOWER_TRIGGER_END
 
 	
@@ -171,9 +173,7 @@ POS_OK:
 	cp		r16, r17
 	brne	NO_DROP
 	
-DROP:
-	//call	DELAY	
-
+DROP:	
 	ldi		r16, NO_SKITTLE
 	sts		(COLOR_POS), r16
 
@@ -293,9 +293,9 @@ LOWER_ROTATE_CW:
 	out		OCR1AL, r16
 	rjmp		NO_DATA
 LOWER_ROTATE_CCW:
-	ldi		r16, HIGH(SERVO_CCW)
+	ldi		r16, HIGH(LOWER_SERVO_CCW)
 	out		OCR1AH, r16
-	ldi		r16, LOW(SERVO_CCW)
+	ldi		r16, LOW(LOWER_SERVO_CCW)
 	out		OCR1AL, r16
 	rjmp	NO_DATA
 LOWER_NO_MOVEMENT:
@@ -427,7 +427,7 @@ WARM:
 	ldi		r16, LOW(SERVO_ST)
 	out		OCR1AL, r16
 
-	//call	MUSIC
+	call	MUSIC
 	
 
 	clr		TIMER0_REG
@@ -539,7 +539,7 @@ WARM:
 		
 
 
-	.equ	PAUSELENGTH = 5
+	.equ	PAUSELENGTH = 2
 
 	.def	NOTE_LENGTH_REG = r25
 
@@ -663,12 +663,12 @@ DL1: dec  r20
 
 NOTE_LENGTH:
 ;	.db		L_G1, L_A1, L_B1, L_Db2, L_G1, L_A1, L_B1, L_Db2, L_Ab1, L_Bb1, L_C2, L_D2, L_Ab1, L_Bb1, L_C2, L_D2, L_A1, L_B1, L_Db2, L_Eb2, L_A1, L_B1, L_Db2, L_Eb2, L_Bb1, L_C2, L_D2, L_E2, L_Bb1, L_C2, L_D2, L_E2, L_B1, L_Db2, L_Eb2, L_F2, L_C2, L_D2, L_E2, L_Gb2, L_Db2, L_Eb2, L_F2, L_G2, L_D2, L_E2, L_Gb2, L_Ab2, L_A1, L_A1, L_Bb1, L_Bb1, L_B1, L_B1, L_C2, L_C2, L_C2, L_C2, L_C2, L_C2
-	.db		L_C3, 0, L_B2, 0, L_Bb2, L_B2, L_Bb2, L_A2, L_Ab2, 0, L_G2, 0, L_Gb2, L_Gb2, L_G2, L_G2, L_A2, 0, L_Ab2, 0, L_G2, L_Ab2, L_G2, L_Gb2, L_F2, 0, L_E2, 0, L_Eb2, L_Eb2, L_E2, L_E2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_B1, L_C2, L_Db2, L_D2, L_Eb2, L_E2, L_F2, L_Gb2, L_G2, L_Ab2, L_A2, L_B2, L_A2, L_A2, L_G2, L_G2
-;	.db		L_C2, L_D2, L_Eb2, L_Eb2, L_Eb2, 0, L_Eb2, 0, L_Eb2, 0, L_D2, 0, L_C2, 0, L_Bb1, 0, L_Bb1, L_Bb1, 0, L_C2, 0, L_C2, L_C2, 0, L_G2, 0, L_F2, 0, L_E2, 0, L_D2, 0, L_E2, L_E2, 0, L_E2, 0, L_E2, 0, L_F2, 0, L_E2, 0, L_F2, 0, L_F2, L_F2, 0, L_G2, 0, L_G2, L_G2, 0, 0, 0, 0, L_C2, L_D2, L_Eb2, L_Eb2, L_Eb2, 0, L_Eb2, 0, L_Eb2, 0, L_D2, 0, L_C2, 0, L_Bb1, 0, L_Bb1, L_Bb1, 0, L_C2, 0, L_C2, L_C2, 0, L_G2, 0, L_F2, 0, L_E2, 0, L_D2, 0, L_E2, L_E2, 0, L_E2, 0, L_E2, 0, L_F2, 0, L_E2, 0, L_F2, 0, L_F2, L_F2, 0, L_G2, 0, L_G2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, L_G2, L_G2, L_G2, L_G2
+;	.db		L_C3, 0, L_B2, 0, L_Bb2, L_B2, L_Bb2, L_A2, L_Ab2, 0, L_G2, 0, L_Gb2, L_Gb2, L_G2, L_G2, L_A2, 0, L_Ab2, 0, L_G2, L_Ab2, L_G2, L_Gb2, L_F2, 0, L_E2, 0, L_Eb2, L_Eb2, L_E2, L_E2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_G2, L_G2, L_F2, L_F2, L_Db2, L_Db2, L_D2, L_D2, L_B1, L_C2, L_Db2, L_D2, L_Eb2, L_E2, L_F2, L_Gb2, L_G2, L_Ab2, L_A2, L_B2, L_A2, L_A2, L_G2, L_G2
+	.db		L_C2, L_D2, L_Eb2, L_Eb2, L_Eb2, 0, L_Eb2, 0, L_Eb2, 0, L_D2, 0, L_C2, 0, L_Bb1, 0, L_Bb1, L_Bb1, 0, L_C2, 0, L_C2, L_C2, 0, L_G2, 0, L_F2, 0, L_E2, 0, L_D2, 0, L_E2, L_E2, 0, L_E2, 0, L_E2, 0, L_F2, 0, L_E2, 0, L_F2, 0, L_F2, L_F2, 0, L_G2, 0, L_G2, L_G2, 0, 0, 0, 0, L_C2, L_D2, L_Eb2, L_Eb2, L_Eb2, 0, L_Eb2, 0, L_Eb2, 0, L_D2, 0, L_C2, 0, L_Bb1, 0, L_Bb1, L_Bb1, 0, L_C2, 0, L_C2, L_C2, 0, L_G2, 0, L_F2, 0, L_E2, 0, L_D2, 0, L_E2, L_E2, 0, L_E2, 0, L_E2, 0, L_F2, 0, L_E2, 0, L_F2, 0, L_F2, L_F2, 0, L_G2, 0, L_G2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, L_G2, L_G2, L_G2, L_G2
 
 NOTES1:
 ;	.db		 G1, A1, B1, Db2, G1, A1, B1, Db2, Ab1, Bb1, C2, D2, Ab1, Bb1, C2, D2, A1, B1, Db2, Eb2, A1, B1, Db2, Eb2, Bb1, C2, D2, E2, Bb1, C2, D2, E2, B1, Db2, Eb2, F2, C2, D2, E2, Gb2, Db2, Eb2, F2, G2, D2, E2, Gb2, Ab2, 0, 0, 0, 0, A1, Bb1, B1, C2, C2, C2, C2
-	.db		C3, 0, B2, 0, Bb2, B2, Bb2, A2, Ab2, 0, G2, 0, Gb2, Gb2, G2, G2, A2, 0, Ab2, 0, G2, Ab2, G2, Gb2, F2, 0, E2, 0, Eb2, Eb2, E2, E2, G2, G2, F2, F2, Db2, Db2, D2, D2, G2, G2, F2, F2, Db2, Db2, D2, D2, B1, C2, Db2, D2, Eb2, E2, F2, Gb2, G2, Ab2, A2, B2, A2, A2, G2, G2
-;	.db		C2, D2, Eb2, Eb2, Eb2, 0, Eb2, 0, Eb2, 0, D2, 0, C2, 0, Bb1, 0, Bb1, Bb1, 0, C2, 0, C2, C2, 0, G2, 0, F2, 0, E2, 0, D2, 0, E2, E2, 0, E2, 0, E2, 0, F2, 0, E2, 0, F2, 0, F2, F2, 0, G2, 0, G2, G2, 0, 0, 0, 0, C2, D2, Eb2, Eb2, Eb2, 0, Eb2, 0, Eb2, 0, D2, 0, C2, 0, Bb1, 0, Bb1, Bb1, 0, C2, 0, C2, C2, 0, G2, 0, F2, 0, E2, 0, D2, 0, E2, E2, 0, E2, 0, E2, 0, F2, 0, E2, 0, F2, 0, F2, F2, 0, G2, 0, G2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, G2, G2, G2, G2
+;	.db		C3, 0, B2, 0, Bb2, B2, Bb2, A2, Ab2, 0, G2, 0, Gb2, Gb2, G2, G2, A2, 0, Ab2, 0, G2, Ab2, G2, Gb2, F2, 0, E2, 0, Eb2, Eb2, E2, E2, G2, G2, F2, F2, Db2, Db2, D2, D2, G2, G2, F2, F2, Db2, Db2, D2, D2, B1, C2, Db2, D2, Eb2, E2, F2, Gb2, G2, Ab2, A2, B2, A2, A2, G2, G2
+	.db		C2, D2, Eb2, Eb2, Eb2, 0, Eb2, 0, Eb2, 0, D2, 0, C2, 0, Bb1, 0, Bb1, Bb1, 0, C2, 0, C2, C2, 0, G2, 0, F2, 0, E2, 0, D2, 0, E2, E2, 0, E2, 0, E2, 0, F2, 0, E2, 0, F2, 0, F2, F2, 0, G2, 0, G2, G2, 0, 0, 0, 0, C2, D2, Eb2, Eb2, Eb2, 0, Eb2, 0, Eb2, 0, D2, 0, C2, 0, Bb1, 0, Bb1, Bb1, 0, C2, 0, C2, C2, 0, G2, 0, F2, 0, E2, 0, D2, 0, E2, E2, 0, E2, 0, E2, 0, F2, 0, E2, 0, F2, 0, F2, F2, 0, G2, 0, G2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, G2, G2, G2, G2
 
 END:
