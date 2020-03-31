@@ -11,4 +11,6 @@ Skittle sort är en sorteringsmaskin för kursen "Mikrodatorprojektet".
 - TCS34725 (RGB sensor)
 
 ![Assembly](https://raw.githubusercontent.com/JoeyStrandnes/TSIU51_Skittle-Sort/master/Project%20Guidelines/Images/Skittle-Sort-Assembly-2.jpg)
+
+![PCB](https://github.com/JoeyStrandnes/TSIU51_Skittle-Sort/blob/master/Project%20Guidelines/Images/Runtime.gif?raw=true)
 ![PCB](https://raw.githubusercontent.com/JoeyStrandnes/TSIU51_Skittle-Sort/master/Project%20Guidelines/Images/IMG_20200310_122352.jpg)
