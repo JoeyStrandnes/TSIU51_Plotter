@@ -1,5 +1,7 @@
 //////// TSIU51 SKITTLE SORT ////////////////////////////////////////////////
-
+//////// ATMEGA16A CONFIG ///////////////////////////////////////////////////
+//CPU CLOCK 8 MHz
+//BOOT FUSE 64 ms
 //////// RBG_SENSOR STATIC REGISTERS ////////////////////////////////////////
 .equ RGB_ENABLE =0x00
 .equ RGB_ATIME = 0x01
@@ -112,13 +114,12 @@ CURRENT_SLAVE:
 	.byte 1
 	.cseg
 //////// RESET/INTERRUPT VECTORS ////////////////////////////////////////
-	.org 0
+.org 0
 	jmp BOOT
 	.org INT0ADDR
-	jmp ISR_INT0
-
-	.org 0x02A
+	jmp ISR_INT0	
 ////////////////////////////////////////////////////////////////////////
+.org 0x02A
 BOOT://FUSE IS SET TO 64 ms STARTUP
 
 	ldi r16, HIGH(RAMEND)
@@ -136,53 +137,12 @@ BOOT://FUSE IS SET TO 64 ms STARTUP
 	call RGB_INIT
 	call UPDATE_DISPLAY
 	sei 
-
 	jmp MAIN
 
 ///////////////////////////////////////////////////////////////////
 
 MAIN:	
-//TESTVÄRDEN FÖR SIMULATOR
-/*
-	ldi r16, LOW(813+81)
-	sts CDATAL, r16
-	ldi r16, HIGH(813+81)
-	sts CDATAH, r16
-
-	ldi r16, LOW(295+29)
-	sts RDATAL, r16
-	ldi r16, HIGH(295+29)
-	sts RDATAH, r16
-
-	ldi r16, LOW(273+27)
-	sts GDATAL, r16
-	ldi r16, HIGH(273+27)
-	sts GDATAH, r16
-
-	ldi r16, LOW(220+22)
-	sts BDATAL, r16
-	ldi r16, HIGH(220+22)
-	sts BDATAH, r16
-*/
-DONE:
-// FUNKTION FÖR ATT FÅ UT REFERENSVÄRDEN
-/*//	call RGB_DELAY_INTEGRATION
-//	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM
-	call COMPARE
-	call COLOR_MATCH
-//	call UPDATE_NUMBER_OF_SKITTLES
-//	call UPDATE_DISPLAY
-	//call SEND_SKITTLE_COLOR_TO_SLAVE
-
-	ldi YH,HIGH(RED_DIFF)
-	ldi YL,LOW(RED_DIFF) 
-	ldi r16, 2*NUMBER_OF_COLORS
-	call INIT_CLEAR_SRAM //CLEAR LATEST DIFFERENCES
-
-*/
-	rjmp DONE
-
-
+	rjmp MAIN:
 
 ///////////////////////////////////////////////////////////////////
 // REFERENCE VALUES MEASURED WITH: GAIN_VALUE = 0x00, ATIME_VALUE = 0xD0
@@ -229,14 +189,9 @@ ISR_INT0:
 	in r16, SREG
 	push r16
 
-	//call THREE_SECOND_DELAY
 	call RGB_DELAY_INTEGRATION
-	call RGB_DELAY_INTEGRATION
+	call RGB_DELAY_INTEGRATION 
 	call READ_ALL_8_RGB_REGISTERS_INTO_SRAM 
-	//call UPDATE_DISPLAY_DEBUG
-	//call THREE_SECOND_DELAY
-	//call THREE_SECOND_DELAY
-
 	call COMPARE
 	call COLOR_MATCH
 	call UPDATE_NUMBER_OF_SKITTLES
@@ -273,7 +228,7 @@ COMPUTE_NEXT_SKITTLE_DIFFERENCE:
 	ldi YH, HIGH(CDATAL)
 	ldi YL, LOW(CDATAL)
 	call COMPUTE_REFERENCE_DIFFERENCE
-	call SCALE_DOWN_DIFFERENCE //SCALES DOWN CLEAR VALUE DIFFERENCE ONLY
+	call SCALE_DOWN_DIFFERENCE 
 
 	ldi YH, HIGH(RDATAL)
 	ldi YL, LOW(RDATAL)
@@ -335,8 +290,8 @@ GET_COLOR_DIFFERENCE:
 	ldd r16, Y+1 
 	push r16 //PUSH RGBDATAH
 
-	call NORMALIZE_RGB_DATA //ANVÄNDER Y OCH Z. ÄNDRAR DOM INTE!
-	call COMPUTE_REFERENCE_DIFFERENCE //ANVÄNDER X, Y, Z. ÄNDRAR DOM INTE!
+	call NORMALIZE_RGB_DATA 
+	call COMPUTE_REFERENCE_DIFFERENCE 
 
 	pop r16 //POP RGBDATAH
 	std Y+1, r16 
@@ -345,6 +300,9 @@ GET_COLOR_DIFFERENCE:
 	pop r16 
 	ret
 ///////////////////////////////////////////////////////////////////
+// RELIES ON:
+// Z POINTER ON CLEAR VALUE OF SKITTLECOLOR IN LOOKUPTABLE.
+// Y POINTER ON ONE BASECOLOR IN THE SAME ROW OF LOOKUPTABLE
 NORMALIZE_RGB_DATA:
 	push ZH
 	push ZL
@@ -378,7 +336,7 @@ NORMALIZE_RGB_DATA:
 	
 	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
 	call DIVIDE_BY_PRECISION  //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
-	//TODO: CHECK IF WITHIN 16BIT
+
 	mov r22, r18 //SAVE QUOTIENT 
 	mov r23, r19 //SAVE QUOTIENT
 
@@ -390,7 +348,6 @@ NORMALIZE_RGB_DATA:
 	
 	call MULTI16 //WANT MULTIPLIERS IN r19:r18 AND r17:r16. RESULT IN r21:r20:r19:r18
 	call DIVIDE_BY_PRECISION //EXPECTS 32BIT IN r21:r20:r19:r18. RESULT IN r21:r20:r19:r18
-	//TODO: CHECK IF WITHIN 16BIT
 
 	mov r16, r18 //MOVES RESULT INTO DIVIDEND
 	mov r17, r19 //MOVES RESULT INTO DIVIDEND
@@ -398,8 +355,8 @@ NORMALIZE_RGB_DATA:
 	lds r19, CDATAH //LOADS THE CLEAR-VALUE FROM SRAM INTO DIVISOR
 	call div16u  //RESULT IN R17:R16. REMAINDER IN R15:R14
 	
-	add r22, r16 //ADD RESULT TO OUR QUOTIENT
-	adc r23, r17 //ADD RESULT TO OUR QUOTIENT
+	add r22, r16 //ADD RESULT TO QUOTIENT
+	adc r23, r17 //ADD RESULT TO QUOTIENT
 	std Y+0, r22 //STORES THE NORMALIZED RGBDATA BACK INTO SRAM
 	std Y+1, r23 //STORES THE NORMALIZED RGBDATA BACK INTO SRAM
 
@@ -442,6 +399,10 @@ ROTATE_AGAIN:
 	ret
 
 ///////////////////////////////////////////////////////////////////
+// RELIES ON:
+// X POINTER ON WHICH COLOR-DIFFERENCE IN SRAM
+// Z POINTER ON CLEAR VALUE OF SKITTLECOLOR IN LOOKUPTABLE.
+// Y POINTER ON ONE BASECOLOR IN THE SAME ROW OF LOOKUPTABLE
 COMPUTE_REFERENCE_DIFFERENCE:	
 	push XH
 	push XL
@@ -451,7 +412,7 @@ COMPUTE_REFERENCE_DIFFERENCE:
 	push r17
 	push r24
 	push r25
-	//ADD OFFSET TO Z
+	//ADD OFFSET TO Z POINTER USING Y POINTER
 	ldi r16, LOW(CDATAL)
 	ldi r17, HIGH(CDATAL)
 	mov r24, YL
@@ -1117,11 +1078,11 @@ GET_DIGIT:
 GET_ASCII:
 	add r18, r16 //RESTORE
 	adc r19, r21 //RESTORE	
-//TODO: ONÖDIGT?
+
 	cpi r20, 10
 	brlo DIGIT_OK
 	ldi r20, 42-48 //LOAD ASTERIX WITHOUT ASCII OFFSET
-//
+
 DIGIT_OK:
 	pop r21
 	pop r17
@@ -1279,23 +1240,23 @@ THREE_SECOND_DELAY:
 	push r18
 	push r19
 	push r20
-    ldi  r18, 122
-    ldi  r19, 214
-    ldi  r20, 74
+	ldi  r18, 122
+	ldi  r19, 214
+	ldi  r20, 74
 THREE_SECOND_DELAY_LOOP: 
 	dec  r20
-    brne THREE_SECOND_DELAY_LOOP
-    dec  r19
-    brne THREE_SECOND_DELAY_LOOP
-    dec  r18
-    brne THREE_SECOND_DELAY_LOOP
+	brne THREE_SECOND_DELAY_LOOP
+	dec  r19
+	brne THREE_SECOND_DELAY_LOOP
+	dec  r18
+	brne THREE_SECOND_DELAY_LOOP
 
 	pop r20
 	pop r19
 	pop r18
 	ret
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
-MULTI16: //MULTI1 IN R17:R16, MULTI2 IN R19:R18
+MULTI16: //MULTIPLIER 1 IN R17:R16, MULTIPLIER 2 IN R19:R18
 	//RESULT IN R21:R20:R19:R18
 	push r0
 	push r1
